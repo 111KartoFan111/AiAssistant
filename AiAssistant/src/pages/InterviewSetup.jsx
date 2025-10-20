@@ -1,35 +1,37 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
+import InterviewService from '../services/interviewService';
 
 const InterviewSetup = () => {
   const navigate = useNavigate();
-  const [field, setField] = useState('');
-  const [position, setPosition] = useState('');
+  const [field, setField] = useState('it'); 
+  const [position, setPosition] = useState('Senior Java Developer');
   const [jobDescription, setJobDescription] = useState('');
-  const [resume, setResume] = useState(null);
-  const [mode, setMode] = useState('voice'); // voice или text
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setResume(file);
-    }
-  };
-
-  const handleStartInterview = (e) => {
+  const handleStartInterview = async (e) => {
     e.preventDefault();
-    
-    // Передаем данные в интервью
-    navigate('/interview', {
-      state: {
-        field,
-        position,
-        jobDescription,
-        resume: resume?.name,
-        mode
-      }
-    });
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await InterviewService.startInterview({ position, jobDescription });
+      const { interviewId, firstQuestion } = response.data;
+
+      navigate('/interview', {
+        state: {
+          interviewId,
+          initialQuestion: firstQuestion,
+          position
+        }
+      });
+    } catch (err) {
+      setError('Failed to start interview. Please try again.');
+      console.error('Start interview error:', err);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -64,12 +66,6 @@ const InterviewSetup = () => {
                 <option value="it">Information Technology</option>
                 <option value="finance">Finance</option>
                 <option value="marketing">Marketing</option>
-                <option value="sales">Sales</option>
-                <option value="hr">Human Resources</option>
-                <option value="design">Design</option>
-                <option value="engineering">Engineering</option>
-                <option value="healthcare">Healthcare</option>
-                <option value="education">Education</option>
               </select>
             </div>
 
@@ -101,80 +97,15 @@ const InterviewSetup = () => {
                 placeholder="Paste the job description here for more relevant questions..."
               />
             </div>
-
-            {/* Загрузка резюме */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Resume (Optional)
-              </label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition">
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                  id="resume-upload"
-                />
-                <label 
-                  htmlFor="resume-upload"
-                  className="cursor-pointer"
-                >
-                  {resume ? (
-                    <div className="text-blue-600">
-                      <p className="font-medium">📄 {resume.name}</p>
-                      <p className="text-sm text-gray-500 mt-1">Click to change</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-gray-600 font-medium">📤 Click to upload resume</p>
-                      <p className="text-sm text-gray-500 mt-1">PDF, DOC, DOCX (max 5MB)</p>
-                    </div>
-                  )}
-                </label>
-              </div>
-            </div>
-
-            {/* Выбор режима */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Interview Mode *
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setMode('voice')}
-                  className={`p-4 border-2 rounded-lg transition ${
-                    mode === 'voice'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  <div className="text-3xl mb-2">🎤</div>
-                  <div className="font-medium text-gray-900">Voice Mode</div>
-                  <div className="text-sm text-gray-600 mt-1">Speak your answers</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setMode('text')}
-                  className={`p-4 border-2 rounded-lg transition ${
-                    mode === 'text'
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  <div className="text-3xl mb-2">💬</div>
-                  <div className="font-medium text-gray-900">Text Mode</div>
-                  <div className="text-sm text-gray-600 mt-1">Type your answers</div>
-                </button>
-              </div>
-            </div>
+            
+            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
             <button
               type="submit"
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-lg transition shadow-md hover:shadow-lg"
+              disabled={isLoading}
+              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-lg transition shadow-md hover:shadow-lg disabled:bg-gray-400"
             >
-              Start Interview
+              {isLoading ? 'Starting...' : 'Start Interview'}
             </button>
           </form>
         </div>

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class ChatMessage {
 
-    private String id; // Firestore document ID
+    private String id;
     private String sessionId;
     private MessageRole role;
     private String content;

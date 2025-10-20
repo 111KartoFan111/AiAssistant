@@ -22,6 +22,4 @@ public class InterviewSessionRepository {
         }
         return session;
     }
-
-    // Методы findById, findByUserId и другие можно добавить по аналогии с UserRepository
 }
