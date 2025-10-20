@@ -1,21 +1,32 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
+import AuthService from '../services/authService';
 
 const SignUp = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      alert('Passwords do not match!');
-      return;
+    setError(''); // Сбрасываем ошибку перед новым запросом
+
+    try {
+      await AuthService.signup({ fullName: name, email, password });
+      // Если регистрация прошла успешно, перенаправляем на страницу входа
+      navigate('/signin');
+    } catch (err) {
+      // Обрабатываем ошибку
+      if (err.response && err.response.data) {
+        setError(err.response.data.message || 'Registration failed. Please try again.');
+      } else {
+        setError('Registration failed. Please check your connection.');
+      }
+      console.error('Signup error:', err);
     }
-    // Здесь будет логика регистрации
-    console.log('Sign Up:', { name, email, password });
   };
 
   return (
@@ -70,20 +81,8 @@ const SignUp = () => {
               />
             </div>
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-            
+            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
             <button
               type="submit"
               className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition shadow-md hover:shadow-lg"

@@ -1,15 +1,45 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
+import AuthService from '../services/authService';
+import api from '../services/api';
 
 const SignIn = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Здесь будет логика входа
-    console.log('Sign In:', { email, password });
+    setError('');
+
+    try {
+      const response = await AuthService.signin({ email, password });
+      
+      // Если вход успешен, бэкенд вернет токен
+      if (response.data && response.data.token) {
+        const token = response.data.token;
+        
+        // 1. Сохраняем токен в localStorage
+        localStorage.setItem('token', token);
+        
+        // 2. Устанавливаем заголовок по умолчанию для всех последующих запросов
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        // 3. Перенаправляем пользователя в личный кабинет
+        navigate('/dashboard');
+      } else {
+        setError('Login failed: No token received.');
+      }
+    } catch (err) {
+      if (err.response && err.response.data) {
+        setError(err.response.data.message || 'Login failed. Please check your credentials.');
+      } else {
+        setError('Login failed. Please check your connection.');
+      }
+      console.error('Signin error:', err);
+    }
   };
 
   return (
@@ -50,6 +80,8 @@ const SignIn = () => {
               />
             </div>
             
+            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
             <button
               type="submit"
               className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition shadow-md hover:shadow-lg"
