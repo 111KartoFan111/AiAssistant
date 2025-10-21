@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./aiAssistant_backend
+      dockerfile: Dockerfile
+    container_name: ai-assistant-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      # Добавьте другие переменные окружения если нужно
+      # - JWT_SECRET=your-secret-key
+      # - GEMINI_API_KEY=your-api-key
+    volumes:
+      # Если нужно монтировать файлы конфигурации
+      - ./aiAssistant_backend/src/main/resources/serviceAccountKey.json:/app/serviceAccountKey.json:ro
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  # Можете добавить фронтенд позже
+  # frontend:
+  #   build:
+  #     context: ./AiAssistant
+  #     dockerfile: Dockerfile
+  #   container_name: ai-assistant-frontend
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - app-network
+
+networks:
+  app-network:
+    driver: bridge

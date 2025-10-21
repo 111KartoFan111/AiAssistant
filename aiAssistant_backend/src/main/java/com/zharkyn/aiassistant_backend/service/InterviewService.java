@@ -1,5 +1,6 @@
 package com.zharkyn.aiassistant_backend.service;
 
+import com.google.cloud.Timestamp;
 import com.zharkyn.aiassistant_backend.dto.InterviewDtos;
 import com.zharkyn.aiassistant_backend.model.ChatMessage;
 import com.zharkyn.aiassistant_backend.model.InterviewSession;
@@ -11,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -32,34 +32,38 @@ public class InterviewService {
                 .position(request.getPosition())
                 .jobDescription(request.getJobDescription())
                 .status(InterviewSession.InterviewStatus.IN_PROGRESS)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Timestamp.now())
                 .build();
         sessionRepository.save(session);
 
-        String firstQuestionText = geminiService.generateInitialQuestion(request.getPosition(), request.getJobDescription()).block();
+        String firstQuestionText = geminiService.generateInitialQuestion(
+            request.getPosition(), 
+            request.getJobDescription()
+        ).block();
 
         ChatMessage firstMessage = ChatMessage.builder()
                 .sessionId(session.getId())
                 .role(ChatMessage.MessageRole.MODEL)
                 .content(firstQuestionText)
-                .timestamp(LocalDateTime.now())
+                .timestamp(java.time.LocalDateTime.now())
                 .build();
         messageRepository.save(firstMessage);
 
         return InterviewDtos.StartInterviewResponse.builder()
-                .sessionId(Long.valueOf(session.getId())) // DTO ожидает Long, преобразуем
-                .firstMessage(new InterviewDtos.ChatMessageResponse(firstMessage.getRole(), firstMessage.getContent()))
+                .sessionId(Long.valueOf(session.getId()))
+                .firstMessage(new InterviewDtos.ChatMessageResponse(
+                    firstMessage.getRole(), 
+                    firstMessage.getContent()
+                ))
                 .build();
     }
     
     public InterviewDtos.ChatMessageResponse postMessage(String sessionId, InterviewDtos.UserMessageRequest request) throws ExecutionException, InterruptedException {
-        // Здесь нужна будет логика получения сессии по ID, пока опустим для простоты
-        
         ChatMessage userMessage = ChatMessage.builder()
                 .sessionId(sessionId)
                 .role(ChatMessage.MessageRole.USER)
                 .content(request.getContent())
-                .timestamp(LocalDateTime.now())
+                .timestamp(java.time.LocalDateTime.now())
                 .build();
         messageRepository.save(userMessage);
 
@@ -71,7 +75,7 @@ public class InterviewService {
                 .sessionId(sessionId)
                 .role(ChatMessage.MessageRole.MODEL)
                 .content(aiResponseText)
-                .timestamp(LocalDateTime.now())
+                .timestamp(java.time.LocalDateTime.now())
                 .build();
         messageRepository.save(aiMessage);
         
