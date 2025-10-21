@@ -8,38 +8,43 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-// DTOs for Gemini API request and response
 public class GeminiDtos {
 
-    // Request structures
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class GeminiRequest {
         private List<Content> contents;
     }
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Content {
-        private String role; // "user" or "model"
+        private String role;
         private List<Part> parts;
     }
 
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class Part {
         private String text;
     }
 
-    // Response structures
     @Data
     @NoArgsConstructor
+    @AllArgsConstructor
     public static class GeminiResponse {
         private List<Candidate> candidates;
     }
 
     @Data
     @NoArgsConstructor
+    @AllArgsConstructor
     public static class Candidate {
         private Content content;
         @JsonProperty("finishReason")

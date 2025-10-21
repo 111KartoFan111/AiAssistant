@@ -17,7 +17,7 @@ public class ChatMessage {
     private String sessionId;
     private MessageRole role;
     private String content;
-    private LocalDateTime timestamp;
+    private Long timestamp;
 
     public enum MessageRole {
         USER,
