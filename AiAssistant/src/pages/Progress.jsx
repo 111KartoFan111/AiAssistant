@@ -28,9 +28,7 @@ const Progress = () => {
 
   const handleSelectInterview = async (interview) => {
     try {
-        // Сначала отображаем базовую информацию
         setSelectedInterview(interview);
-        // Затем подгружаем детали (разговор)
         const response = await InterviewService.getInterviewDetails(interview.id);
         setSelectedInterview(response.data);
     } catch (err) {
@@ -63,7 +61,6 @@ const Progress = () => {
         <p className="text-gray-600 mb-8">Track your interview performance and improvements</p>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Список интервью */}
           <div className="lg:col-span-1 space-y-4">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Interview History</h2>
             {interviews.length > 0 ? interviews.map((interview) => (
@@ -82,8 +79,6 @@ const Progress = () => {
               </div>
             )) : <p>No interviews found.</p>}
           </div>
-
-          {/* Детальный анализ */}
           <div className="lg:col-span-2">
             {selectedInterview ? (
               <div className="bg-white rounded-xl shadow-lg p-8">

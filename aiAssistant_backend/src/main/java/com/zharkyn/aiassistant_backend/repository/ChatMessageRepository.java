@@ -2,12 +2,12 @@ package com.zharkyn.aiassistant_backend.repository;
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QuerySnapshot;
 import com.google.firebase.cloud.FirestoreClient;
 import com.zharkyn.aiassistant_backend.model.ChatMessage;
 import org.springframework.stereotype.Repository;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -28,14 +28,22 @@ public class ChatMessageRepository {
         return message;
     }
 
+    /**
+     * ✅ ИСПРАВЛЕНО: Убрана сортировка на уровне Firestore, чтобы не требовать индекс.
+     * Сортировка выполняется в Java после получения данных.
+     */
     public List<ChatMessage> findBySessionIdOrderByTimestampAsc(String sessionId) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
+        
+        // Выполняем запрос БЕЗ orderBy - это не требует индекса
         ApiFuture<QuerySnapshot> future = dbFirestore.collection(COLLECTION_NAME)
                 .whereEqualTo("sessionId", sessionId)
-                .orderBy("timestamp", Query.Direction.ASCENDING)
                 .get();
+        
+        // Получаем результаты и сортируем в памяти
         return future.get().getDocuments().stream()
                 .map(doc -> doc.toObject(ChatMessage.class))
+                .sorted(Comparator.comparing(ChatMessage::getTimestamp))  // Сортировка в Java
                 .collect(Collectors.toList());
     }
 }

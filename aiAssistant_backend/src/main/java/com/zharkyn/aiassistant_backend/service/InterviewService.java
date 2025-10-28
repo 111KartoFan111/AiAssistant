@@ -1,6 +1,10 @@
 package com.zharkyn.aiassistant_backend.service;
 
+import com.google.api.core.ApiFuture;
 import com.google.cloud.Timestamp;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QuerySnapshot;
+import com.google.firebase.cloud.FirestoreClient;
 import com.zharkyn.aiassistant_backend.dto.InterviewDtos;
 import com.zharkyn.aiassistant_backend.model.ChatMessage;
 import com.zharkyn.aiassistant_backend.model.InterviewSession;
@@ -13,8 +17,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -68,8 +74,8 @@ public class InterviewService {
         log.info("First message saved");
 
         return InterviewDtos.StartInterviewResponse.builder()
-                .interviewId(session.getId())  // Return as String
-                .firstQuestion(firstQuestionText)  // Match frontend expectations
+                .interviewId(session.getId())
+                .firstQuestion(firstQuestionText)
                 .build();
     }
     
@@ -81,7 +87,7 @@ public class InterviewService {
         ChatMessage userMessage = ChatMessage.builder()
                 .sessionId(sessionId)
                 .role(ChatMessage.MessageRole.USER)
-                .content(request.getAnswer())  // Changed from getContent() to getAnswer()
+                .content(request.getAnswer())
                 .timestamp(System.currentTimeMillis())
                 .build();
         messageRepository.save(userMessage);
@@ -114,8 +120,121 @@ public class InterviewService {
         return InterviewDtos.ChatMessageResponse.builder()
                 .role(aiMessage.getRole())
                 .content(aiMessage.getContent())
-                .nextQuestion(aiMessage.getContent())  // Add for frontend compatibility
+                .nextQuestion(aiMessage.getContent())
                 .build();
+    }
+
+    /**
+     * Получить историю всех интервью текущего пользователя
+     * ✅ ИСПРАВЛЕНО: Убрана сортировка orderBy для избежания требования индекса
+     */
+    public List<InterviewDtos.InterviewHistoryResponse> getInterviewHistory() 
+            throws ExecutionException, InterruptedException {
+        log.info("Fetching interview history");
+        
+        User currentUser = getCurrentUser();
+        
+        // Запрос БЕЗ orderBy - не требует индекса
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        ApiFuture<QuerySnapshot> future = dbFirestore.collection("interview_sessions")
+                .whereEqualTo("userId", currentUser.getId())
+                .get();
+        
+        List<InterviewSession> sessions = future.get().toObjects(InterviewSession.class);
+        log.info("Found {} interview sessions", sessions.size());
+        
+        // Сортируем в Java по убыванию даты (новые сначала)
+        return sessions.stream()
+                .sorted(Comparator.comparing(InterviewSession::getCreatedAt, 
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(session -> InterviewDtos.InterviewHistoryResponse.builder()
+                        .id(session.getId())
+                        .position(session.getPosition())
+                        .jobDescription(session.getJobDescription())
+                        .status(session.getStatus())
+                        .startTime(session.getCreatedAt() != null ? 
+                                session.getCreatedAt().toDate().toString() : null)
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Получить детальную информацию об интервью
+     */
+    public InterviewDtos.InterviewDetailResponse getInterviewDetails(String interviewId) 
+            throws ExecutionException, InterruptedException {
+        log.info("Fetching interview details for: {}", interviewId);
+        
+        User currentUser = getCurrentUser();
+        
+        // Get interview session
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        InterviewSession session = dbFirestore.collection("interview_sessions")
+                .document(interviewId)
+                .get()
+                .get()
+                .toObject(InterviewSession.class);
+        
+        if (session == null) {
+            throw new RuntimeException("Interview not found");
+        }
+        
+        // Verify ownership
+        if (!session.getUserId().equals(currentUser.getId())) {
+            throw new RuntimeException("Unauthorized access to interview");
+        }
+        
+        // Get conversation messages
+        List<ChatMessage> messages = messageRepository.findBySessionIdOrderByTimestampAsc(interviewId);
+        log.info("Found {} messages for interview", messages.size());
+        
+        List<InterviewDtos.ConversationMessage> conversation = messages.stream()
+                .map(msg -> InterviewDtos.ConversationMessage.builder()
+                        .role(msg.getRole().name())
+                        .content(msg.getContent())
+                        .build())
+                .collect(Collectors.toList());
+        
+        return InterviewDtos.InterviewDetailResponse.builder()
+                .id(session.getId())
+                .position(session.getPosition())
+                .jobDescription(session.getJobDescription())
+                .status(session.getStatus())
+                .startTime(session.getCreatedAt() != null ? 
+                        session.getCreatedAt().toDate().toString() : null)
+                .conversation(conversation)
+                .build();
+    }
+
+    /**
+     * Завершить интервью (изменить статус на COMPLETED)
+     */
+    public void completeInterview(String interviewId) 
+            throws ExecutionException, InterruptedException {
+        log.info("Completing interview: {}", interviewId);
+        
+        User currentUser = getCurrentUser();
+        
+        // Get interview session
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        InterviewSession session = dbFirestore.collection("interview_sessions")
+                .document(interviewId)
+                .get()
+                .get()
+                .toObject(InterviewSession.class);
+        
+        if (session == null) {
+            throw new RuntimeException("Interview not found");
+        }
+        
+        if (!session.getUserId().equals(currentUser.getId())) {
+            throw new RuntimeException("Unauthorized access to interview");
+        }
+        
+        session.setStatus(InterviewSession.InterviewStatus.COMPLETED);
+        sessionRepository.save(session);
+        
+        log.info("Interview {} marked as completed", interviewId);
     }
 
     private User getCurrentUser() throws ExecutionException, InterruptedException {

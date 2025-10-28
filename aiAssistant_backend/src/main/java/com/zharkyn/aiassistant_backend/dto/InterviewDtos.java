@@ -1,11 +1,14 @@
 package com.zharkyn.aiassistant_backend.dto;
 
 import com.zharkyn.aiassistant_backend.model.ChatMessage;
+import com.zharkyn.aiassistant_backend.model.InterviewSession;
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 public class InterviewDtos {
 
@@ -24,8 +27,8 @@ public class InterviewDtos {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class StartInterviewResponse {
-        private String interviewId;  // Changed from sessionId to match frontend
-        private String firstQuestion;  // Changed from firstMessage to match frontend
+        private String interviewId;
+        private String firstQuestion;
     }
 
     @Data
@@ -34,7 +37,7 @@ public class InterviewDtos {
     @AllArgsConstructor
     public static class UserMessageRequest {
         @NotEmpty
-        private String answer;  // Changed from content to match frontend
+        private String answer;
     }
     
     @Data
@@ -44,6 +47,40 @@ public class InterviewDtos {
     public static class ChatMessageResponse {
         private ChatMessage.MessageRole role;
         private String content;
-        private String nextQuestion;  // Added to match frontend expectations
+        private String nextQuestion;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class InterviewHistoryResponse {
+        private String id;
+        private String position;
+        private String jobDescription;
+        private InterviewSession.InterviewStatus status;
+        private String startTime;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class InterviewDetailResponse {
+        private String id;
+        private String position;
+        private String jobDescription;
+        private InterviewSession.InterviewStatus status;
+        private String startTime;
+        private List<ConversationMessage> conversation;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ConversationMessage {
+        private String role;
+        private String content;
     }
 }

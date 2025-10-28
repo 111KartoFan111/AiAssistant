@@ -13,10 +13,8 @@ const LandingPage = () => {
       
       {/* Контейнер */}
       <div className="relative z-10">
-        {/* Хедер */}
         <Header />
         
-        {/* Основной контент */}
         <main className="max-w-4xl mx-auto px-6 pt-32 pb-20 text-center">
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
             Interview preparation<br />assistant
