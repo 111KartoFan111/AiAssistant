@@ -5,8 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -17,7 +15,8 @@ public class ChatMessage {
     private String sessionId;
     private MessageRole role;
     private String content;
-    private Long timestamp;
+    // ✅ ИСПРАВЛЕНИЕ: Изменено с LocalDateTime на Long для совместимости с Firestore
+    private Long timestamp; // Unix timestamp в миллисекундах
 
     public enum MessageRole {
         USER,

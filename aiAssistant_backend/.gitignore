@@ -31,5 +31,15 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# ✅ ИСПРАВЛЕНИЕ: Добавлены файлы с секретами
 serviceAccountKey.json
-aiAssistant_backend/src/main/resources/application.properties
+src/main/resources/serviceAccountKey.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# ⚠️ ВАЖНО: Раскомментируйте следующую строку если используете .env для локальной разработки
+# src/main/resources/application.properties

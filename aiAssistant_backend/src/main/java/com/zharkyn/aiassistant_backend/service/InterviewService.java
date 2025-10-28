@@ -41,11 +41,12 @@ public class InterviewService {
             request.getJobDescription()
         ).block();
 
+        // ✅ ИСПРАВЛЕНИЕ: Используем System.currentTimeMillis() вместо LocalDateTime.now()
         ChatMessage firstMessage = ChatMessage.builder()
                 .sessionId(session.getId())
                 .role(ChatMessage.MessageRole.MODEL)
                 .content(firstQuestionText)
-                .timestamp(java.time.LocalDateTime.now())
+                .timestamp(System.currentTimeMillis())
                 .build();
         messageRepository.save(firstMessage);
 
@@ -59,11 +60,12 @@ public class InterviewService {
     }
     
     public InterviewDtos.ChatMessageResponse postMessage(String sessionId, InterviewDtos.UserMessageRequest request) throws ExecutionException, InterruptedException {
+        // ✅ ИСПРАВЛЕНИЕ: Используем System.currentTimeMillis()
         ChatMessage userMessage = ChatMessage.builder()
                 .sessionId(sessionId)
                 .role(ChatMessage.MessageRole.USER)
                 .content(request.getContent())
-                .timestamp(java.time.LocalDateTime.now())
+                .timestamp(System.currentTimeMillis())
                 .build();
         messageRepository.save(userMessage);
 
@@ -71,11 +73,12 @@ public class InterviewService {
 
         String aiResponseText = geminiService.generateNextResponse(chatHistory).block();
 
+        // ✅ ИСПРАВЛЕНИЕ: Используем System.currentTimeMillis()
         ChatMessage aiMessage = ChatMessage.builder()
                 .sessionId(sessionId)
                 .role(ChatMessage.MessageRole.MODEL)
                 .content(aiResponseText)
-                .timestamp(java.time.LocalDateTime.now())
+                .timestamp(System.currentTimeMillis())
                 .build();
         messageRepository.save(aiMessage);
         

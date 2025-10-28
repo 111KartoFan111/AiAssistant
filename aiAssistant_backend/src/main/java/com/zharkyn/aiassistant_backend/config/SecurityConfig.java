@@ -4,6 +4,7 @@ import com.zharkyn.aiassistant_backend.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -51,6 +52,8 @@ public class SecurityConfig {
                                         "/swagger-ui.html",
                                         "/error"
                                 ).permitAll()
+                                // ✅ ИСПРАВЛЕНИЕ: Разрешаем OPTIONS запросы для CORS preflight
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -82,10 +85,10 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Разрешаем запросы с этих origins
-        configuration.setAllowedOriginPatterns(Arrays.asList("*")); // Для dev
-        // Для production используйте конкретные домены:
+        // ✅ ИСПРАВЛЕНИЕ: Для development разрешаем все origins
+        // Для production замените на конкретные домены:
         // configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "https://yourdomain.com"));
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         
         // Разрешаем все HTTP методы
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
