@@ -12,7 +12,8 @@ const InterviewSetup = () => {
   const [jobDescription, setJobDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [language, setLanguage] = useState('en'); // Default language is English
+  const [language, setLanguage] = useState('en');
+  const [company, setCompany] = useState('');
 
   const handleStartInterview = async (e) => {
     e.preventDefault();
@@ -20,14 +21,22 @@ const InterviewSetup = () => {
     setError('');
 
     try {
-      const response = await InterviewService.startInterview({ position, jobDescription, language });
-      const { interviewId, firstQuestion } = response.data;
+      const response = await InterviewService.startInterview({ 
+        position, 
+        jobDescription, 
+        language,
+        company 
+      });
+      const { interviewId, firstQuestion, questionType, currentQuestionNumber, totalQuestions } = response.data;
 
       navigate('/interview', {
         state: {
           interviewId,
           initialQuestion: firstQuestion,
-          position
+          position,
+          questionType,
+          currentQuestionNumber,
+          totalQuestions
         }
       });
     } catch (err) {
@@ -36,6 +45,15 @@ const InterviewSetup = () => {
       setIsLoading(false);
     }
   };
+
+  const companies = [
+    { id: 'kaspi', name: 'Kaspi', logo: '🏦' },
+    { id: 'jusan', name: 'Jusan', logo: '🏛️' },
+    { id: 'halyk', name: 'Halyk Bank', logo: '🏦' },
+    { id: 'kolesa', name: 'Kolesa Group', logo: '🚗' },
+    { id: 'air-astana', name: 'Air Astana', logo: '✈️' },
+    { id: 'kazmunaygas', name: 'KazMunayGas', logo: '⛽' }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -51,45 +69,8 @@ const InterviewSetup = () => {
 
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Setup Your Interview</h1>
-          <p className="text-gray-600 mb-8">Configure your interview simulation</p>
+          <p className="text-gray-600 mb-8">Configure your interview simulation (20 questions)</p>
 
-              <div className="mb-8">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Company *
-                </label>
-                <Swiper
-                  spaceBetween={20}
-                  slidesPerView={3}
-                  className="company-swiper"
-                >
-                  {[
-                    { id: 'kaspi', name: 'Kaspi', logo: '🏦' },
-                    { id: 'jusan', name: 'Jusan', logo: '🏛️' },
-                    { id: 'halyk', name: 'Halyk Bank', logo: '🏦' },
-                    { id: 'kolesa', name: 'Kolesa Group', logo: '🚗' },
-                    { id: 'air-astana', name: 'Air Astana', logo: '✈️' },
-                    { id: 'kazmunaygas', name: 'KazMunayGas', logo: '⛽' }
-                  ].map((company) => (
-                    <SwiperSlide key={company.id}>
-                      <button
-                        onClick={() => {
-                          setPosition(`${position} at ${company.name}`);
-                          // You can add more company-specific logic here
-                        }}
-                        className={`w-full p-4 rounded-lg border-2 transition-all ${
-                          position.includes(company.name)
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-blue-300'
-                        }`}
-                      >
-                        <div className="text-2xl mb-2">{company.logo}</div>
-                        <div className="font-medium">{company.name}</div>
-                      </button>
-                    </SwiperSlide>
-                  ))}
-                </Swiper>
-              </div>
-          
           <form onSubmit={handleStartInterview} className="space-y-6">
             {/* Interview Language */}
             <div>
@@ -119,7 +100,40 @@ const InterviewSetup = () => {
               </div>
             </div>
 
-            {/* Сфера деятельности */}
+            {/* Select Company */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Company (Optional)
+              </label>
+              <Swiper
+                spaceBetween={20}
+                slidesPerView={3}
+                breakpoints={{
+                  640: { slidesPerView: 2 },
+                  768: { slidesPerView: 3 },
+                }}
+                className="company-swiper"
+              >
+                {companies.map((comp) => (
+                  <SwiperSlide key={comp.id}>
+                    <button
+                      type="button"
+                      onClick={() => setCompany(comp.id)}
+                      className={`w-full p-4 rounded-lg border-2 transition-all ${
+                        company === comp.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-blue-300'
+                      }`}
+                    >
+                      <div className="text-2xl mb-2">{comp.logo}</div>
+                      <div className="font-medium text-sm">{comp.name}</div>
+                    </button>
+                  </SwiperSlide>
+                ))}
+              </Swiper>
+            </div>
+
+            {/* Field / Industry */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Field / Industry *
@@ -134,10 +148,12 @@ const InterviewSetup = () => {
                 <option value="it">Information Technology</option>
                 <option value="finance">Finance</option>
                 <option value="marketing">Marketing</option>
+                <option value="engineering">Engineering</option>
+                <option value="healthcare">Healthcare</option>
               </select>
             </div>
 
-            {/* Должность */}
+            {/* Position */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Position *
@@ -152,8 +168,7 @@ const InterviewSetup = () => {
               />
             </div>
 
-
-            {/* Описание вакансии */}
+            {/* Job Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Job Description (Optional)
@@ -166,6 +181,21 @@ const InterviewSetup = () => {
                 placeholder="Paste the job description here for more relevant questions..."
               />
             </div>
+
+            {/* Interview Structure Info */}
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+              <div className="flex items-start">
+                <span className="text-blue-500 text-xl mr-3">📋</span>
+                <div>
+                  <p className="text-blue-900 font-medium mb-1">Interview Structure (20 Questions)</p>
+                  <ul className="text-blue-700 text-sm space-y-1">
+                    <li>• <strong>Background Questions (1-5):</strong> About your experience and career</li>
+                    <li>• <strong>Situational Questions (6-13):</strong> How you handle various scenarios</li>
+                    <li>• <strong>Technical Questions (14-20):</strong> Skills and domain knowledge</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
             
             {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
@@ -174,7 +204,7 @@ const InterviewSetup = () => {
               disabled={isLoading}
               className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 rounded-lg transition shadow-md hover:shadow-lg disabled:bg-gray-400"
             >
-              {isLoading ? 'Starting...' : 'Start Interview'}
+              {isLoading ? 'Starting...' : 'Start Interview (20 Questions)'}
             </button>
           </form>
         </div>

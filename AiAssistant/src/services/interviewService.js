@@ -16,6 +16,10 @@ class InterviewService {
     getInterviewDetails(interviewId) {
         return api.get(`/interviews/${interviewId}`);
     }
+
+    completeInterview(interviewId) {
+        return api.post(`/interviews/${interviewId}/complete`);
+    }
 }
 
 export default new InterviewService();
