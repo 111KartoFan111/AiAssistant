@@ -20,6 +20,8 @@ public class InterviewDtos {
         @NotEmpty
         private String position;
         private String jobDescription;
+        private String language; // en, ru, kz
+        private String company; // Добавлено для выбора компании
     }
 
     @Data
@@ -29,6 +31,9 @@ public class InterviewDtos {
     public static class StartInterviewResponse {
         private String interviewId;
         private String firstQuestion;
+        private String questionType; // BACKGROUND, SITUATIONAL, TECHNICAL
+        private Integer currentQuestionNumber; // 1
+        private Integer totalQuestions; // 20
     }
 
     @Data
@@ -48,6 +53,10 @@ public class InterviewDtos {
         private ChatMessage.MessageRole role;
         private String content;
         private String nextQuestion;
+        private String questionType; // BACKGROUND, SITUATIONAL, TECHNICAL
+        private Integer currentQuestionNumber;
+        private Integer totalQuestions;
+        private Boolean isInterviewComplete; // true если достигли 20 вопросов
     }
 
     @Data
@@ -60,6 +69,8 @@ public class InterviewDtos {
         private String jobDescription;
         private InterviewSession.InterviewStatus status;
         private String startTime;
+        private String language;
+        private String company;
     }
 
     @Data
@@ -72,6 +83,8 @@ public class InterviewDtos {
         private String jobDescription;
         private InterviewSession.InterviewStatus status;
         private String startTime;
+        private String language;
+        private String company;
         private List<ConversationMessage> conversation;
     }
 
@@ -82,5 +95,6 @@ public class InterviewDtos {
     public static class ConversationMessage {
         private String role;
         private String content;
+        private String questionType; // для AI сообщений
     }
 }

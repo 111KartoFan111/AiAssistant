@@ -32,6 +32,11 @@ public class InterviewService {
     private final UserRepository userRepository;
     private final GeminiService geminiService;
 
+    private static final int TOTAL_QUESTIONS = 20;
+    private static final int BACKGROUND_QUESTIONS = 5;  // Вопросы 1-5
+    private static final int SITUATIONAL_QUESTIONS = 8; // Вопросы 6-13
+    private static final int TECHNICAL_QUESTIONS = 7;   // Вопросы 14-20
+
     public InterviewDtos.StartInterviewResponse startInterview(InterviewDtos.InterviewSetupRequest request) 
             throws ExecutionException, InterruptedException {
         log.info("Starting interview for position: {}", request.getPosition());
@@ -44,18 +49,27 @@ public class InterviewService {
                 .userId(currentUser.getId())
                 .position(request.getPosition())
                 .jobDescription(request.getJobDescription())
+                .language(request.getLanguage() != null ? request.getLanguage() : "en")
+                .company(request.getCompany())
                 .status(InterviewSession.InterviewStatus.IN_PROGRESS)
+                .currentQuestionNumber(1)
+                .totalQuestions(TOTAL_QUESTIONS)
                 .createdAt(Timestamp.now())
                 .build();
         session = sessionRepository.save(session);
         log.info("Interview session created with ID: {}", session.getId());
+
+        // Определяем тип первого вопроса
+        ChatMessage.QuestionType questionType = determineQuestionType(1);
 
         // Generate first question
         String firstQuestionText;
         try {
             firstQuestionText = geminiService.generateInitialQuestion(
                 request.getPosition(), 
-                request.getJobDescription() != null ? request.getJobDescription() : ""
+                request.getJobDescription() != null ? request.getJobDescription() : "",
+                request.getLanguage() != null ? request.getLanguage() : "en",
+                questionType
             ).block();
             log.info("First question generated: {}", firstQuestionText);
         } catch (Exception e) {
@@ -68,6 +82,8 @@ public class InterviewService {
                 .sessionId(session.getId())
                 .role(ChatMessage.MessageRole.MODEL)
                 .content(firstQuestionText)
+                .questionType(questionType)
+                .questionNumber(1)
                 .timestamp(System.currentTimeMillis())
                 .build();
         messageRepository.save(firstMessage);
@@ -76,6 +92,9 @@ public class InterviewService {
         return InterviewDtos.StartInterviewResponse.builder()
                 .interviewId(session.getId())
                 .firstQuestion(firstQuestionText)
+                .questionType(questionType.name())
+                .currentQuestionNumber(1)
+                .totalQuestions(TOTAL_QUESTIONS)
                 .build();
     }
     
@@ -83,6 +102,18 @@ public class InterviewService {
             throws ExecutionException, InterruptedException {
         log.info("Processing message for session: {}", sessionId);
         
+        // Get session to check current question number
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        InterviewSession session = dbFirestore.collection("interview_sessions")
+                .document(sessionId)
+                .get()
+                .get()
+                .toObject(InterviewSession.class);
+
+        if (session == null) {
+            throw new RuntimeException("Interview session not found");
+        }
+
         // Save user message
         ChatMessage userMessage = ChatMessage.builder()
                 .sessionId(sessionId)
@@ -93,6 +124,27 @@ public class InterviewService {
         messageRepository.save(userMessage);
         log.info("User message saved");
 
+        // Увеличиваем номер вопроса
+        int nextQuestionNumber = session.getCurrentQuestionNumber() + 1;
+
+        // Проверяем, не закончилось ли интервью
+        if (nextQuestionNumber > TOTAL_QUESTIONS) {
+            log.info("Interview completed - reached {} questions", TOTAL_QUESTIONS);
+            session.setStatus(InterviewSession.InterviewStatus.COMPLETED);
+            sessionRepository.save(session);
+            
+            return InterviewDtos.ChatMessageResponse.builder()
+                    .role(ChatMessage.MessageRole.MODEL)
+                    .content("Thank you for completing the interview! You answered all 20 questions.")
+                    .isInterviewComplete(true)
+                    .currentQuestionNumber(TOTAL_QUESTIONS)
+                    .totalQuestions(TOTAL_QUESTIONS)
+                    .build();
+        }
+
+        // Определяем тип следующего вопроса
+        ChatMessage.QuestionType nextQuestionType = determineQuestionType(nextQuestionNumber);
+
         // Get chat history
         List<ChatMessage> chatHistory = messageRepository.findBySessionIdOrderByTimestampAsc(sessionId);
         log.info("Retrieved {} messages from history", chatHistory.size());
@@ -100,7 +152,13 @@ public class InterviewService {
         // Generate AI response
         String aiResponseText;
         try {
-            aiResponseText = geminiService.generateNextResponse(chatHistory).block();
+            aiResponseText = geminiService.generateNextResponse(
+                chatHistory, 
+                session.getLanguage(),
+                nextQuestionType,
+                nextQuestionNumber,
+                TOTAL_QUESTIONS
+            ).block();
             log.info("AI response generated");
         } catch (Exception e) {
             log.error("Error generating AI response", e);
@@ -112,21 +170,43 @@ public class InterviewService {
                 .sessionId(sessionId)
                 .role(ChatMessage.MessageRole.MODEL)
                 .content(aiResponseText)
+                .questionType(nextQuestionType)
+                .questionNumber(nextQuestionNumber)
                 .timestamp(System.currentTimeMillis())
                 .build();
         messageRepository.save(aiMessage);
         log.info("AI message saved");
+
+        // Update session with new question number
+        session.setCurrentQuestionNumber(nextQuestionNumber);
+        sessionRepository.save(session);
         
         return InterviewDtos.ChatMessageResponse.builder()
                 .role(aiMessage.getRole())
                 .content(aiMessage.getContent())
                 .nextQuestion(aiMessage.getContent())
+                .questionType(nextQuestionType.name())
+                .currentQuestionNumber(nextQuestionNumber)
+                .totalQuestions(TOTAL_QUESTIONS)
+                .isInterviewComplete(false)
                 .build();
     }
 
     /**
+     * Определяет тип вопроса в зависимости от номера
+     */
+    private ChatMessage.QuestionType determineQuestionType(int questionNumber) {
+        if (questionNumber <= BACKGROUND_QUESTIONS) {
+            return ChatMessage.QuestionType.BACKGROUND;
+        } else if (questionNumber <= BACKGROUND_QUESTIONS + SITUATIONAL_QUESTIONS) {
+            return ChatMessage.QuestionType.SITUATIONAL;
+        } else {
+            return ChatMessage.QuestionType.TECHNICAL;
+        }
+    }
+
+    /**
      * Получить историю всех интервью текущего пользователя
-     * ✅ ИСПРАВЛЕНО: Убрана сортировка orderBy для избежания требования индекса
      */
     public List<InterviewDtos.InterviewHistoryResponse> getInterviewHistory() 
             throws ExecutionException, InterruptedException {
@@ -134,7 +214,6 @@ public class InterviewService {
         
         User currentUser = getCurrentUser();
         
-        // Запрос БЕЗ orderBy - не требует индекса
         Firestore dbFirestore = FirestoreClient.getFirestore();
         ApiFuture<QuerySnapshot> future = dbFirestore.collection("interview_sessions")
                 .whereEqualTo("userId", currentUser.getId())
@@ -143,7 +222,6 @@ public class InterviewService {
         List<InterviewSession> sessions = future.get().toObjects(InterviewSession.class);
         log.info("Found {} interview sessions", sessions.size());
         
-        // Сортируем в Java по убыванию даты (новые сначала)
         return sessions.stream()
                 .sorted(Comparator.comparing(InterviewSession::getCreatedAt, 
                         Comparator.nullsLast(Comparator.reverseOrder())))
@@ -152,6 +230,8 @@ public class InterviewService {
                         .position(session.getPosition())
                         .jobDescription(session.getJobDescription())
                         .status(session.getStatus())
+                        .language(session.getLanguage())
+                        .company(session.getCompany())
                         .startTime(session.getCreatedAt() != null ? 
                                 session.getCreatedAt().toDate().toString() : null)
                         .build())
@@ -167,7 +247,6 @@ public class InterviewService {
         
         User currentUser = getCurrentUser();
         
-        // Get interview session
         Firestore dbFirestore = FirestoreClient.getFirestore();
         InterviewSession session = dbFirestore.collection("interview_sessions")
                 .document(interviewId)
@@ -179,12 +258,10 @@ public class InterviewService {
             throw new RuntimeException("Interview not found");
         }
         
-        // Verify ownership
         if (!session.getUserId().equals(currentUser.getId())) {
             throw new RuntimeException("Unauthorized access to interview");
         }
         
-        // Get conversation messages
         List<ChatMessage> messages = messageRepository.findBySessionIdOrderByTimestampAsc(interviewId);
         log.info("Found {} messages for interview", messages.size());
         
@@ -192,6 +269,7 @@ public class InterviewService {
                 .map(msg -> InterviewDtos.ConversationMessage.builder()
                         .role(msg.getRole().name())
                         .content(msg.getContent())
+                        .questionType(msg.getQuestionType() != null ? msg.getQuestionType().name() : null)
                         .build())
                 .collect(Collectors.toList());
         
@@ -200,6 +278,8 @@ public class InterviewService {
                 .position(session.getPosition())
                 .jobDescription(session.getJobDescription())
                 .status(session.getStatus())
+                .language(session.getLanguage())
+                .company(session.getCompany())
                 .startTime(session.getCreatedAt() != null ? 
                         session.getCreatedAt().toDate().toString() : null)
                 .conversation(conversation)
@@ -207,7 +287,7 @@ public class InterviewService {
     }
 
     /**
-     * Завершить интервью (изменить статус на COMPLETED)
+     * Завершить интервью
      */
     public void completeInterview(String interviewId) 
             throws ExecutionException, InterruptedException {
@@ -215,7 +295,6 @@ public class InterviewService {
         
         User currentUser = getCurrentUser();
         
-        // Get interview session
         Firestore dbFirestore = FirestoreClient.getFirestore();
         InterviewSession session = dbFirestore.collection("interview_sessions")
                 .document(interviewId)
