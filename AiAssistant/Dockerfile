@@ -1,7 +1,13 @@
+# Используем Node 20 (Alpine)
 FROM node:20-alpine
 
-# Устанавливаем рабочую директорию
 WORKDIR /app
+
+# Устанавливаем зеркало npm для стабильной сети
+RUN npm config set registry https://registry.npmmirror.com \
+    && npm config set fetch-retries 5 \
+    && npm config set fetch-retry-factor 2 \
+    && npm config set fetch-timeout 60000
 
 # Копируем package.json и package-lock.json
 COPY package*.json ./
@@ -12,8 +18,8 @@ RUN npm install
 # Копируем остальные файлы проекта
 COPY . .
 
-# Открываем порт 3000
-EXPOSE 3000
+# Сборка приложения
+RUN npm run build
 
-# Запускаем dev сервер Vite
-CMD ["npm", "run", "dev", "--", "--host"]
+EXPOSE 5173
+CMD ["npm", "run", "dev"]

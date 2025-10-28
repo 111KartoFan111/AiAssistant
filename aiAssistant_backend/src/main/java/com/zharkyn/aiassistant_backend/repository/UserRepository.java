@@ -20,12 +20,10 @@ public class UserRepository {
     public User save(User user) throws ExecutionException, InterruptedException {
         Firestore dbFirestore = FirestoreClient.getFirestore();
         if (user.getId() == null) {
-            // Create new user
             var docRef = dbFirestore.collection(COLLECTION_NAME).document();
             user.setId(docRef.getId());
             docRef.set(user).get();
         } else {
-            // Update existing user
             dbFirestore.collection(COLLECTION_NAME).document(user.getId()).set(user).get();
         }
         return user;

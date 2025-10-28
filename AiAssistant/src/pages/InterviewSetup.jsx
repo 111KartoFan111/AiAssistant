@@ -12,6 +12,7 @@ const InterviewSetup = () => {
   const [jobDescription, setJobDescription] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [language, setLanguage] = useState('en'); // Default language is English
 
   const handleStartInterview = async (e) => {
     e.preventDefault();
@@ -19,7 +20,7 @@ const InterviewSetup = () => {
     setError('');
 
     try {
-      const response = await InterviewService.startInterview({ position, jobDescription });
+      const response = await InterviewService.startInterview({ position, jobDescription, language });
       const { interviewId, firstQuestion } = response.data;
 
       navigate('/interview', {
@@ -52,21 +53,71 @@ const InterviewSetup = () => {
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Setup Your Interview</h1>
           <p className="text-gray-600 mb-8">Configure your interview simulation</p>
 
-              <Swiper
-      spaceBetween={50}
-      slidesPerView={3}
-      onSlideChange={() => console.log('slide change')}
-      onSwiper={(swiper) => console.log(swiper)}
-    >
-      <SwiperSlide>Slide 1</SwiperSlide>
-      <SwiperSlide>Slide 2</SwiperSlide>
-      <SwiperSlide>Slide 3</SwiperSlide>
-      <SwiperSlide>Slide 4</SwiperSlide>
-      <SwiperSlide>Slide 5</SwiperSlide>
-      <SwiperSlide>Slide 6</SwiperSlide>
-    </Swiper>
+              <div className="mb-8">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Company *
+                </label>
+                <Swiper
+                  spaceBetween={20}
+                  slidesPerView={3}
+                  className="company-swiper"
+                >
+                  {[
+                    { id: 'kaspi', name: 'Kaspi', logo: '🏦' },
+                    { id: 'jusan', name: 'Jusan', logo: '🏛️' },
+                    { id: 'halyk', name: 'Halyk Bank', logo: '🏦' },
+                    { id: 'kolesa', name: 'Kolesa Group', logo: '🚗' },
+                    { id: 'air-astana', name: 'Air Astana', logo: '✈️' },
+                    { id: 'kazmunaygas', name: 'KazMunayGas', logo: '⛽' }
+                  ].map((company) => (
+                    <SwiperSlide key={company.id}>
+                      <button
+                        onClick={() => {
+                          setPosition(`${position} at ${company.name}`);
+                          // You can add more company-specific logic here
+                        }}
+                        className={`w-full p-4 rounded-lg border-2 transition-all ${
+                          position.includes(company.name)
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="text-2xl mb-2">{company.logo}</div>
+                        <div className="font-medium">{company.name}</div>
+                      </button>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
           
           <form onSubmit={handleStartInterview} className="space-y-6">
+            {/* Interview Language */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Interview Language *
+              </label>
+              <div className="grid grid-cols-3 gap-4">
+                {[
+                  { id: 'en', name: 'English', flag: '🇬🇧' },
+                  { id: 'ru', name: 'Русский', flag: '🇷🇺' },
+                  { id: 'kz', name: 'Қазақша', flag: '🇰🇿' }
+                ].map((lang) => (
+                  <button
+                    key={lang.id}
+                    type="button"
+                    onClick={() => setLanguage(lang.id)}
+                    className={`flex items-center justify-center p-4 rounded-lg border-2 transition-all ${
+                      language === lang.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <span className="text-xl mr-2">{lang.flag}</span>
+                    <span className="font-medium">{lang.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Сфера деятельности */}
             <div>
