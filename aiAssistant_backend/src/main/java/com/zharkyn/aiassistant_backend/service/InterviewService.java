@@ -9,12 +9,14 @@ import com.zharkyn.aiassistant_backend.repository.ChatMessageRepository;
 import com.zharkyn.aiassistant_backend.repository.InterviewSessionRepository;
 import com.zharkyn.aiassistant_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InterviewService {
@@ -24,9 +26,14 @@ public class InterviewService {
     private final UserRepository userRepository;
     private final GeminiService geminiService;
 
-    public InterviewDtos.StartInterviewResponse startInterview(InterviewDtos.InterviewSetupRequest request) throws ExecutionException, InterruptedException {
+    public InterviewDtos.StartInterviewResponse startInterview(InterviewDtos.InterviewSetupRequest request) 
+            throws ExecutionException, InterruptedException {
+        log.info("Starting interview for position: {}", request.getPosition());
+        
         User currentUser = getCurrentUser();
+        log.info("Current user: {}", currentUser.getEmail());
 
+        // Create interview session
         InterviewSession session = InterviewSession.builder()
                 .userId(currentUser.getId())
                 .position(request.getPosition())
@@ -34,14 +41,23 @@ public class InterviewService {
                 .status(InterviewSession.InterviewStatus.IN_PROGRESS)
                 .createdAt(Timestamp.now())
                 .build();
-        sessionRepository.save(session);
+        session = sessionRepository.save(session);
+        log.info("Interview session created with ID: {}", session.getId());
 
-        String firstQuestionText = geminiService.generateInitialQuestion(
-            request.getPosition(), 
-            request.getJobDescription()
-        ).block();
+        // Generate first question
+        String firstQuestionText;
+        try {
+            firstQuestionText = geminiService.generateInitialQuestion(
+                request.getPosition(), 
+                request.getJobDescription() != null ? request.getJobDescription() : ""
+            ).block();
+            log.info("First question generated: {}", firstQuestionText);
+        } catch (Exception e) {
+            log.error("Error generating first question", e);
+            throw new RuntimeException("Failed to generate first question: " + e.getMessage(), e);
+        }
 
-        // ✅ ИСПРАВЛЕНИЕ: Используем System.currentTimeMillis() вместо LocalDateTime.now()
+        // Save first message
         ChatMessage firstMessage = ChatMessage.builder()
                 .sessionId(session.getId())
                 .role(ChatMessage.MessageRole.MODEL)
@@ -49,31 +65,43 @@ public class InterviewService {
                 .timestamp(System.currentTimeMillis())
                 .build();
         messageRepository.save(firstMessage);
+        log.info("First message saved");
 
         return InterviewDtos.StartInterviewResponse.builder()
-                .sessionId(Long.valueOf(session.getId()))
-                .firstMessage(new InterviewDtos.ChatMessageResponse(
-                    firstMessage.getRole(), 
-                    firstMessage.getContent()
-                ))
+                .interviewId(session.getId())  // Return as String
+                .firstQuestion(firstQuestionText)  // Match frontend expectations
                 .build();
     }
     
-    public InterviewDtos.ChatMessageResponse postMessage(String sessionId, InterviewDtos.UserMessageRequest request) throws ExecutionException, InterruptedException {
-        // ✅ ИСПРАВЛЕНИЕ: Используем System.currentTimeMillis()
+    public InterviewDtos.ChatMessageResponse postMessage(String sessionId, InterviewDtos.UserMessageRequest request) 
+            throws ExecutionException, InterruptedException {
+        log.info("Processing message for session: {}", sessionId);
+        
+        // Save user message
         ChatMessage userMessage = ChatMessage.builder()
                 .sessionId(sessionId)
                 .role(ChatMessage.MessageRole.USER)
-                .content(request.getContent())
+                .content(request.getAnswer())  // Changed from getContent() to getAnswer()
                 .timestamp(System.currentTimeMillis())
                 .build();
         messageRepository.save(userMessage);
+        log.info("User message saved");
 
+        // Get chat history
         List<ChatMessage> chatHistory = messageRepository.findBySessionIdOrderByTimestampAsc(sessionId);
+        log.info("Retrieved {} messages from history", chatHistory.size());
 
-        String aiResponseText = geminiService.generateNextResponse(chatHistory).block();
+        // Generate AI response
+        String aiResponseText;
+        try {
+            aiResponseText = geminiService.generateNextResponse(chatHistory).block();
+            log.info("AI response generated");
+        } catch (Exception e) {
+            log.error("Error generating AI response", e);
+            throw new RuntimeException("Failed to generate response: " + e.getMessage(), e);
+        }
 
-        // ✅ ИСПРАВЛЕНИЕ: Используем System.currentTimeMillis()
+        // Save AI message
         ChatMessage aiMessage = ChatMessage.builder()
                 .sessionId(sessionId)
                 .role(ChatMessage.MessageRole.MODEL)
@@ -81,13 +109,19 @@ public class InterviewService {
                 .timestamp(System.currentTimeMillis())
                 .build();
         messageRepository.save(aiMessage);
+        log.info("AI message saved");
         
-        return new InterviewDtos.ChatMessageResponse(aiMessage.getRole(), aiMessage.getContent());
+        return InterviewDtos.ChatMessageResponse.builder()
+                .role(aiMessage.getRole())
+                .content(aiMessage.getContent())
+                .nextQuestion(aiMessage.getContent())  // Add for frontend compatibility
+                .build();
     }
 
     private User getCurrentUser() throws ExecutionException, InterruptedException {
         String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
+        log.info("Getting current user: {}", userEmail);
         return userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found: " + userEmail));
     }
 }
