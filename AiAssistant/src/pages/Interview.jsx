@@ -12,17 +12,14 @@ const Interview = () => {
   const [isLoading, setIsLoading] = useState(false);
   const chatEndRef = useRef(null);
 
-  // Инициализация чата при первой загрузке
   useEffect(() => {
     if (initialQuestion) {
       setMessages([{ role: 'AI', content: initialQuestion, timestamp: new Date() }]);
     } else {
-        // Если данных нет, возвращаем пользователя назад
         navigate('/interview-setup');
     }
   }, [initialQuestion, navigate]);
 
-  // Прокрутка к последнему сообщению
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -50,7 +47,6 @@ const Interview = () => {
   };
 
   const handleEndInterview = () => {
-    // TODO: Добавить вызов API для завершения интервью и получения фидбэка
     navigate('/progress');
   };
 
@@ -70,7 +66,6 @@ const Interview = () => {
 
       <main className="flex-1 p-6 flex justify-center">
         <div className="w-full max-w-4xl flex flex-col">
-          {/* Область чата */}
           <div className="flex-1 space-y-6 overflow-y-auto p-4 bg-white rounded-t-xl shadow-inner">
             {messages.map((msg, index) => (
               <div key={index} className={`flex ${msg.role === 'USER' ? 'justify-end' : 'justify-start'}`}>
@@ -97,7 +92,6 @@ const Interview = () => {
             <div ref={chatEndRef} />
           </div>
 
-          {/* Поле ввода */}
           <div className="bg-white p-4 border-t border-gray-200 rounded-b-xl">
             <form onSubmit={handleSendMessage} className="flex gap-4">
               <input

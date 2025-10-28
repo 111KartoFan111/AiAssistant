@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import InterviewService from '../services/interviewService';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import 'swiper/css';
 
 const InterviewSetup = () => {
   const navigate = useNavigate();
@@ -49,8 +51,23 @@ const InterviewSetup = () => {
         <div className="bg-white rounded-2xl shadow-lg p-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Setup Your Interview</h1>
           <p className="text-gray-600 mb-8">Configure your interview simulation</p>
+
+              <Swiper
+      spaceBetween={50}
+      slidesPerView={3}
+      onSlideChange={() => console.log('slide change')}
+      onSwiper={(swiper) => console.log(swiper)}
+    >
+      <SwiperSlide>Slide 1</SwiperSlide>
+      <SwiperSlide>Slide 2</SwiperSlide>
+      <SwiperSlide>Slide 3</SwiperSlide>
+      <SwiperSlide>Slide 4</SwiperSlide>
+      <SwiperSlide>Slide 5</SwiperSlide>
+      <SwiperSlide>Slide 6</SwiperSlide>
+    </Swiper>
           
           <form onSubmit={handleStartInterview} className="space-y-6">
+
             {/* Сфера деятельности */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -83,6 +100,7 @@ const InterviewSetup = () => {
                 required
               />
             </div>
+
 
             {/* Описание вакансии */}
             <div>

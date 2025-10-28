@@ -38,13 +38,11 @@ public class GeminiService {
     public Mono<String> generateNextResponse(List<com.zharkyn.aiassistant_backend.model.ChatMessage> history) {
         List<GeminiDtos.Content> contents = history.stream()
                 .map(msg -> {
-                    // Map MessageRole to Gemini's expected roles
                     String geminiRole = msg.getRole().name().equals("USER") ? "user" : "model";
                     return createContent(geminiRole, msg.getContent());
                 })
                 .collect(Collectors.toList());
 
-        // Add system instruction to continue the interview
         contents.add(createContent("user", 
             "Continue the interview by asking a relevant follow-up question based on my previous answer. " +
             "Keep your questions professional and relevant to the position. Just provide the question, no preamble."));
