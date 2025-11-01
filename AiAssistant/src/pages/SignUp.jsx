@@ -30,25 +30,25 @@ const SignUp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gray-50">
       <Header />
       
       <div className="max-w-md mx-auto px-6 pt-20 pb-20">
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Create account</h1>
-          <p className="text-gray-600 mb-8">Start preparing for interviews</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Создать аккаунт</h1>
+          <p className="text-gray-600 mb-8">Начните подготовку к собеседованиям</p>
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Full Name
+                Полное имя
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-                placeholder="John Doe"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3D2D4C] focus:border-transparent outline-none transition"
+                placeholder="Полное имя"
                 required
               />
             </div>
@@ -61,7 +61,7 @@ const SignUp = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3D2D4C] focus:border-transparent outline-none transition"
                 placeholder="your@email.com"
                 required
               />
@@ -69,13 +69,13 @@ const SignUp = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                Пароль
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3D2D4C] focus:border-transparent outline-none transition"
                 placeholder="••••••••"
                 required
               />
@@ -85,16 +85,16 @@ const SignUp = () => {
 
             <button
               type="submit"
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition shadow-md hover:shadow-lg"
+              className="w-full bg-[#3D2D4C] hover:bg-[#2D1D3C] text-white font-semibold py-3 rounded-lg transition shadow-md hover:shadow-lg"
             >
-              Create account
+              Создать аккаунт
             </button>
           </form>
           
           <p className="mt-6 text-center text-gray-600">
-            Already have an account?{' '}
-            <Link to="/signin" className="text-blue-500 hover:text-blue-600 font-medium">
-              Sign in
+            Уже есть аккаунт?{' '}
+            <Link to="/signin" className="text-[#3D2D4C] hover:text-[#2D1D3C] font-medium">
+              Войти
             </Link>
           </p>
         </div>

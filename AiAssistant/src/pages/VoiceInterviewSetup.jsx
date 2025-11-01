@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
 import InterviewService from '../services/interviewService';
+import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 
-const InterviewSetup = () => {
+const VoiceInterviewSetup = () => {
   const navigate = useNavigate();
   const [field, setField] = useState('it'); 
   const [position, setPosition] = useState('Senior Java Developer');
@@ -20,7 +21,7 @@ const InterviewSetup = () => {
     setError('');
 
     try {
-      const response = await InterviewService.startInterview({ 
+      const response = await InterviewService.startVoiceInterview({ 
         position, 
         jobDescription, 
         language,
@@ -28,7 +29,7 @@ const InterviewSetup = () => {
       });
       const { interviewId, firstQuestion, questionType, currentQuestionNumber, totalQuestions } = response.data;
 
-      navigate('/interview', {
+      navigate('/voice-interview', {
         state: {
           interviewId,
           initialQuestion: firstQuestion,
@@ -39,8 +40,8 @@ const InterviewSetup = () => {
         }
       });
     } catch (err) {
-      setError('Failed to start interview. Please try again.');
-      console.error('Start interview error:', err);
+      setError('Failed to start voice interview. Please try again.');
+      console.error('Start voice interview error:', err);
       setIsLoading(false);
     }
   };
@@ -134,12 +135,13 @@ const InterviewSetup = () => {
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-[#3D2D4C] rounded-lg flex items-center justify-center">
               <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Настройка текстового интервью</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Настройка голосового интервью</h1>
           </div>
-          <p className="text-gray-600 mb-8">Настройте параметры интервью (20 вопросов)</p>
+          <p className="text-gray-600 mb-8">Настройте параметры голосового интервью (20 вопросов)</p>
 
           <form onSubmit={handleStartInterview} className="space-y-6">
             {/* Interview Language */}
@@ -251,16 +253,17 @@ const InterviewSetup = () => {
               />
             </div>
 
-            {/* Interview Structure Info */}
+            {/* Voice Interview Info */}
             <div className="bg-[#3D2D4C] bg-opacity-10 border-l-4 border-[#3D2D4C] p-4 rounded">
               <div className="flex items-start">
-                <span className="text-[#3D2D4C] text-xl mr-3">📋</span>
+                <span className="text-[#3D2D4C] text-xl mr-3">🎙️</span>
                 <div>
-                  <p className="text-gray-900 font-medium mb-1">Структура интервью (20 вопросов)</p>
+                  <p className="text-gray-900 font-medium mb-1">Структура голосового интервью (20 вопросов)</p>
                   <ul className="text-gray-700 text-sm space-y-1">
                     <li>• <strong>Вопросы о биографии (1-5):</strong> О вашем опыте и карьере</li>
                     <li>• <strong>Ситуационные вопросы (6-13):</strong> Как вы справляетесь с различными сценариями</li>
                     <li>• <strong>Технические вопросы (14-20):</strong> Навыки и знание предметной области</li>
+                    <li className="mt-2 text-[#3D2D4C] font-semibold">💡 Говорите четко и уверенно в микрофон</li>
                   </ul>
                 </div>
               </div>
@@ -271,9 +274,19 @@ const InterviewSetup = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#3D2D4C] hover:bg-[#2D1D3C] text-white font-semibold py-4 rounded-lg transition shadow-md hover:shadow-lg disabled:bg-gray-400"
+              className="w-full bg-[#3D2D4C] hover:bg-[#2D1D3C] text-white font-semibold py-4 rounded-lg transition shadow-md hover:shadow-lg disabled:bg-gray-400 flex items-center justify-center gap-2"
             >
-              {isLoading ? 'Запуск...' : 'Начать интервью (20 вопросов)'}
+              {isLoading ? (
+                'Запуск...'
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                  </svg>
+                  Начать голосовое интервью (20 вопросов)
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -282,4 +295,4 @@ const InterviewSetup = () => {
   );
 };
 
-export default InterviewSetup;
+export default VoiceInterviewSetup;

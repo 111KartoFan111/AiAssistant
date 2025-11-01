@@ -43,13 +43,13 @@ const SignIn = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gray-50">
       <Header />
       
       <div className="max-w-md mx-auto px-6 pt-20 pb-20">
         <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h1>
-          <p className="text-gray-600 mb-8">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Добро пожаловать</h1>
+          <p className="text-gray-600 mb-8">Войдите в свой аккаунт</p>
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
@@ -60,7 +60,7 @@ const SignIn = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3D2D4C] focus:border-transparent outline-none transition"
                 placeholder="your@email.com"
                 required
               />
@@ -68,13 +68,13 @@ const SignIn = () => {
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                Пароль
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3D2D4C] focus:border-transparent outline-none transition"
                 placeholder="••••••••"
                 required
               />
@@ -84,16 +84,16 @@ const SignIn = () => {
 
             <button
               type="submit"
-              className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 rounded-lg transition shadow-md hover:shadow-lg"
+              className="w-full bg-[#3D2D4C] hover:bg-[#2D1D3C] text-white font-semibold py-3 rounded-lg transition shadow-md hover:shadow-lg"
             >
-              Sign in
+              Войти
             </button>
           </form>
           
           <p className="mt-6 text-center text-gray-600">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-blue-500 hover:text-blue-600 font-medium">
-              Sign up
+            Нет аккаунта?{' '}
+            <Link to="/signup" className="text-[#3D2D4C] hover:text-[#2D1D3C] font-medium">
+              Зарегистрироваться
             </Link>
           </p>
         </div>

@@ -8,6 +8,8 @@ import InterviewSetup from './pages/InterviewSetup';
 import Interview from './pages/Interview';
 import Resume from './pages/Resume';
 import Progress from './pages/Progress';
+import VoiceInterviewSetup from './pages/VoiceInterviewSetup';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
         <Route path="/interview" element={<Interview />} />
         <Route path="/resume" element={<Resume />} />
         <Route path="/progress" element={<Progress />} />
+        <Route path="/voice-interview-setup" element={<VoiceInterviewSetup />} />
+        <Route path="/profile" element={<Profile />} />
       </Routes>
     </Router>
   );
