@@ -39,4 +39,8 @@ public class UserRepository {
         }
         return Optional.empty();
     }
+    public void deleteById(String userId) throws ExecutionException, InterruptedException {
+    Firestore dbFirestore = FirestoreClient.getFirestore();
+    dbFirestore.collection(COLLECTION_NAME).document(userId).delete().get();
+}
 }

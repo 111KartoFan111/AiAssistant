@@ -25,7 +25,7 @@ public class AuthenticationService {
                 throw new IllegalArgumentException("Email already in use.");
             }
             var user = User.builder()
-                    .fullName(request.getFullName())
+                    .firstName(request.getFullName())
                     .email(request.getEmail())
                     .password(passwordEncoder.encode(request.getPassword()))
                     .build();

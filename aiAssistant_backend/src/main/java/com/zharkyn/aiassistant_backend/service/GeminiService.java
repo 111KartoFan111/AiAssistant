@@ -134,4 +134,24 @@ public class GeminiService {
                 .parts(List.of(GeminiDtos.Part.builder().text(text).build()))
                 .build();
     }
+    public Mono<String> evaluateAnswer(String evaluationPrompt) {
+        GeminiDtos.Content content = createContent("user", evaluationPrompt);
+        
+        GeminiDtos.GeminiRequest request = GeminiDtos.GeminiRequest.builder()
+                .contents(List.of(content))
+                .build();
+
+        return webClient.post()
+                .uri(uriBuilder -> uriBuilder.queryParam("key", apiKey).build())
+                .bodyValue(request)
+                .retrieve()
+                .bodyToMono(GeminiDtos.GeminiResponse.class)
+                .doOnError(error -> log.error("Error calling Gemini API for evaluation", error))
+                .map(response -> {
+                    if (response.getCandidates() == null || response.getCandidates().isEmpty()) {
+                        throw new RuntimeException("No response from Gemini API");
+                    }
+                    return response.getCandidates().get(0).getContent().getParts().get(0).getText();
+                });
+    }
 }

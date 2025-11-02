@@ -1,6 +1,6 @@
 package com.zharkyn.aiassistant_backend.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.google.cloud.Timestamp;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,8 +9,11 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
 
+/**
+ * Модель пользователя с профильными полями
+ */
 @Data
 @Builder
 @NoArgsConstructor
@@ -18,42 +21,48 @@ import java.util.List;
 public class User implements UserDetails {
 
     private String id;
-    private String fullName;
     private String email;
     private String password;
+    
+    // Профильные поля
+    private String firstName;
+    private String lastName;
+    private String phoneNumber;
+    private String bio; // О себе
+    private String avatarBase64; // Аватар в base64
+    private String linkedInProfile;
+    private String githubProfile;
+    
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
 
+    // Реализация UserDetails
     @Override
-    @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        return Collections.emptyList();
     }
 
     @Override
-    @JsonIgnore
     public String getUsername() {
         return email;
     }
 
     @Override
-    @JsonIgnore
     public boolean isAccountNonExpired() {
         return true;
     }
 
     @Override
-    @JsonIgnore
     public boolean isAccountNonLocked() {
         return true;
     }
 
     @Override
-    @JsonIgnore
     public boolean isCredentialsNonExpired() {
         return true;
     }
 
     @Override
-    @JsonIgnore
     public boolean isEnabled() {
         return true;
     }
