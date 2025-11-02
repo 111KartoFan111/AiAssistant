@@ -35,7 +35,7 @@ build/
 # ✅ ИСПРАВЛЕНИЕ: Добавлены файлы с секретами
 serviceAccountKey.json
 src/main/resources/serviceAccountKey.json
-
+src/main/resources/application.properties
 # Environment variables
 .env
 .env.local
