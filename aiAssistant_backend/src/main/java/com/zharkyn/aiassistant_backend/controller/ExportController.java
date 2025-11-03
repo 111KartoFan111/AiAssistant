@@ -5,6 +5,10 @@ import com.zharkyn.aiassistant_backend.service.ExportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import java.util.concurrent.ExecutionException;
+
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -102,6 +106,34 @@ public class ExportController {
         } catch (Exception e) {
             log.error("Error pausing interview", e);
             throw new RuntimeException("Failed to pause interview: " + e.getMessage(), e);
+        }
+    }
+    /**
+     * Экспортировать результаты интервью в PDF
+     */
+    @GetMapping("/{interviewId}")
+    public ResponseEntity<ByteArrayResource> exportInterviewPDF(@PathVariable String interviewId) {
+        try {
+            log.info("Exporting interview {} to PDF", interviewId);
+            byte[] pdfBytes = exportService.exportInterviewToPDF(interviewId);
+            
+            ByteArrayResource resource = new ByteArrayResource(pdfBytes);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, 
+                String.format("attachment; filename=interview-%s.pdf", interviewId));
+            headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE);
+            
+            log.info("PDF exported successfully for interview: {}", interviewId);
+            
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentLength(pdfBytes.length)
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(resource);
+        } catch (ExecutionException | InterruptedException e) {
+            log.error("Error exporting interview to PDF", e);
+            throw new RuntimeException("Failed to export interview: " + e.getMessage(), e);
         }
     }
 }

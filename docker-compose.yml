@@ -14,7 +14,7 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG
       - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB_CORS=DEBUG
-      - OPENAI_API_KEY=
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - ./aiAssistant_backend/src/main/resources/serviceAccountKey.json:/app/serviceAccountKey.json:ro
     restart: unless-stopped
