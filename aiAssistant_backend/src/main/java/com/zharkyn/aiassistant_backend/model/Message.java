@@ -7,11 +7,10 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class VoiceMessage {
+public class Message {
     private String id;
     private String sessionId;
-    private String sender;
-    private String audioUrl;
-    private String textContent;
+    private String role;
+    private String content;
     private Long timestamp;
 }

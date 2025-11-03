@@ -1,88 +1,55 @@
 package com.zharkyn.aiassistant_backend.repository;
 
 import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.*;
-import com.google.firebase.cloud.FirestoreClient;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QuerySnapshot;
 import com.zharkyn.aiassistant_backend.model.VoiceMessage;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
-/**
- * Репозиторий для работы с голосовыми сообщениями в Firestore
- */
-@Slf4j
 @Repository
+@Slf4j
 public class VoiceMessageRepository {
-
+    
     private static final String COLLECTION_NAME = "voice_messages";
+    private final Firestore firestore;
 
-    /**
-     * Сохранить голосовое сообщение
-     */
-    public VoiceMessage save(VoiceMessage voiceMessage) throws ExecutionException, InterruptedException {
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        
-        if (voiceMessage.getId() == null || voiceMessage.getId().isEmpty()) {
-            // Создаем новое сообщение
-            ApiFuture<DocumentReference> future = dbFirestore.collection(COLLECTION_NAME).add(voiceMessage);
-            DocumentReference docRef = future.get();
-            voiceMessage.setId(docRef.getId());
-            log.info("Voice message created with ID: {}", voiceMessage.getId());
-        } else {
-            // Обновляем существующее сообщение
-            ApiFuture<WriteResult> future = dbFirestore.collection(COLLECTION_NAME)
-                    .document(voiceMessage.getId())
-                    .set(voiceMessage);
-            future.get();
-            log.info("Voice message updated with ID: {}", voiceMessage.getId());
-        }
-        
-        return voiceMessage;
+    @Autowired
+    public VoiceMessageRepository(Firestore firestore) {
+        this.firestore = firestore;
     }
 
-    /**
-     * Найти все сообщения по ID сессии, отсортированные по времени
-     */
-    public List<VoiceMessage> findBySessionIdOrderByTimestampAsc(String sessionId) 
-            throws ExecutionException, InterruptedException {
-        Firestore dbFirestore = FirestoreClient.getFirestore();
+    public String create(VoiceMessage message) throws ExecutionException, InterruptedException {
+        DocumentReference docRef = firestore.collection(COLLECTION_NAME).document();
+        message.setId(docRef.getId());
+        message.setTimestamp(System.currentTimeMillis());
         
-        ApiFuture<QuerySnapshot> future = dbFirestore.collection(COLLECTION_NAME)
+        ApiFuture<com.google.cloud.firestore.WriteResult> result = docRef.set(message);
+        result.get();
+        
+        log.info("Voice message created with ID: {}", docRef.getId());
+        return docRef.getId();
+    }
+
+    public List<VoiceMessage> getBySessionId(String sessionId) throws ExecutionException, InterruptedException {
+        ApiFuture<QuerySnapshot> future = firestore.collection(COLLECTION_NAME)
                 .whereEqualTo("sessionId", sessionId)
-                .orderBy("timestamp", Query.Direction.ASCENDING)
+                .orderBy("timestamp")
                 .get();
         
         QuerySnapshot querySnapshot = future.get();
-        List<VoiceMessage> messages = querySnapshot.toObjects(VoiceMessage.class);
-        
-        // Устанавливаем ID из документа
-        for (int i = 0; i < messages.size(); i++) {
-            messages.get(i).setId(querySnapshot.getDocuments().get(i).getId());
-        }
+        List<VoiceMessage> messages = querySnapshot.getDocuments().stream()
+                .map(doc -> doc.toObject(VoiceMessage.class))
+                .collect(Collectors.toList());
         
         log.info("Found {} voice messages for session {}", messages.size(), sessionId);
         return messages;
-    }
-
-    /**
-     * Удалить все сообщения для сессии
-     */
-    public void deleteBySessionId(String sessionId) throws ExecutionException, InterruptedException {
-        Firestore dbFirestore = FirestoreClient.getFirestore();
-        
-        ApiFuture<QuerySnapshot> future = dbFirestore.collection(COLLECTION_NAME)
-                .whereEqualTo("sessionId", sessionId)
-                .get();
-        
-        QuerySnapshot querySnapshot = future.get();
-        
-        for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-            document.getReference().delete();
-        }
-        
-        log.info("Deleted all voice messages for session {}", sessionId);
     }
 }

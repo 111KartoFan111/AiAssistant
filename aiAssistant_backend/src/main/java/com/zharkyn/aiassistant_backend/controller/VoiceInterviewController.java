@@ -1,135 +1,163 @@
 package com.zharkyn.aiassistant_backend.controller;
 
 import com.zharkyn.aiassistant_backend.dto.VoiceInterviewDtos;
+import com.zharkyn.aiassistant_backend.dto.VoiceInterviewAnswerResponse;
 import com.zharkyn.aiassistant_backend.service.VoiceInterviewService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
+import java.io.IOException;
+import java.util.concurrent.ExecutionException;
 
-/**
- * REST контроллер для управления голосовыми интервью
- */
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/voice-interviews")
-@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
+@Slf4j
 public class VoiceInterviewController {
-    
+
     private final VoiceInterviewService voiceInterviewService;
 
-    /**
-     * Начать новое голосовое интервью
-     */
+    @Autowired
+    public VoiceInterviewController(VoiceInterviewService voiceInterviewService) {
+        this.voiceInterviewService = voiceInterviewService;
+    }
+
     @PostMapping("/start")
     public ResponseEntity<VoiceInterviewDtos.StartVoiceInterviewResponse> startVoiceInterview(
-            @Valid @RequestBody VoiceInterviewDtos.VoiceInterviewSetupRequest request) {
+            @RequestBody VoiceInterviewDtos.VoiceInterviewSetupRequest request) {
         try {
-            log.info("Starting voice interview for position: {}", request.getPosition());
-            VoiceInterviewDtos.StartVoiceInterviewResponse response = 
-                voiceInterviewService.startVoiceInterview(request);
-            log.info("Voice interview started successfully with sessionId: {}", response.getInterviewId());
-            return ResponseEntity.ok(response);
+            log.info("Starting voice interview for position: {}", request.getPositionTitle());
+            VoiceInterviewDtos.VoiceInterviewResponse response = voiceInterviewService.startVoiceInterview(request);
+            
+            return ResponseEntity.ok(new VoiceInterviewDtos.StartVoiceInterviewResponse(
+                    response.isSuccess(),
+                    response.getMessage(),
+                    response.getSessionId()
+            ));
         } catch (Exception e) {
             log.error("Error starting voice interview", e);
-            throw new RuntimeException("Failed to start voice interview: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new VoiceInterviewDtos.StartVoiceInterviewResponse(
+                            false,
+                            "Error: " + e.getMessage(),
+                            null
+                    ));
         }
     }
 
-    /**
-     * Отправить голосовой ответ (аудио файл) на вопрос интервью
-     */
-    @PostMapping(value = "/{interviewId}/answer-audio", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping("/{sessionId}/answer-audio")
     public ResponseEntity<VoiceInterviewDtos.VoiceResponseDto> submitAudioAnswer(
-            @PathVariable String interviewId,
+            @PathVariable String sessionId,
             @RequestParam("audio") MultipartFile audioFile) {
         try {
             log.info("Submitting audio answer for interview: {}, file size: {} bytes", 
-                interviewId, audioFile.getSize());
+                    sessionId, audioFile.getSize());
             
-            VoiceInterviewDtos.VoiceResponseDto response = 
-                voiceInterviewService.processAudioAnswer(interviewId, audioFile);
+            VoiceInterviewAnswerResponse response = voiceInterviewService.processAudioAnswer(sessionId, audioFile);
             
-            log.info("Audio answer processed successfully");
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
+            return ResponseEntity.ok(new VoiceInterviewDtos.VoiceResponseDto(
+                    response.isSuccess(),
+                    response.getMessage(),
+                    response.getAiResponse(),
+                    response.getAiMessageId()
+            ));
+        } catch (IOException | ExecutionException | InterruptedException e) {
             log.error("Error processing audio answer", e);
-            throw new RuntimeException("Failed to process audio answer: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new VoiceInterviewDtos.VoiceResponseDto(
+                            false,
+                            "Error: " + e.getMessage(),
+                            null,
+                            null
+                    ));
         }
     }
 
-    /**
-     * Получить аудио вопрос в формате base64
-     */
-    @GetMapping("/{interviewId}/question-audio/{questionNumber}")
+    @GetMapping("/{sessionId}/question/{questionNumber}/audio")
     public ResponseEntity<VoiceInterviewDtos.AudioQuestionResponse> getQuestionAudio(
-            @PathVariable String interviewId,
+            @PathVariable String sessionId,
             @PathVariable Integer questionNumber) {
         try {
-            log.info("Getting audio for question {} in interview {}", questionNumber, interviewId);
-            VoiceInterviewDtos.AudioQuestionResponse response = 
-                voiceInterviewService.getQuestionAudio(interviewId, questionNumber);
-            return ResponseEntity.ok(response);
+            log.info("Getting question audio for session: {}, question: {}", sessionId, questionNumber);
+            VoiceInterviewDtos.AudioResponse response = voiceInterviewService.getQuestionAudio(sessionId, questionNumber);
+            
+            return ResponseEntity.ok(new VoiceInterviewDtos.AudioQuestionResponse(
+                    response.isSuccess(),
+                    response.getMessage(),
+                    response.getAudioUrl()
+            ));
         } catch (Exception e) {
             log.error("Error getting question audio", e);
-            throw new RuntimeException("Failed to get question audio: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new VoiceInterviewDtos.AudioQuestionResponse(
+                            false,
+                            "Error: " + e.getMessage(),
+                            null
+                    ));
         }
     }
 
-    /**
-     * Получить историю всех голосовых интервью текущего пользователя
-     */
-    @GetMapping
-    public ResponseEntity<List<VoiceInterviewDtos.VoiceInterviewHistoryResponse>> getVoiceInterviewHistory() {
+    @GetMapping("/history")
+    public ResponseEntity<VoiceInterviewDtos.VoiceInterviewHistoryResponse> getVoiceInterviewHistory() {
         try {
             log.info("Fetching voice interview history");
-            List<VoiceInterviewDtos.VoiceInterviewHistoryResponse> history = 
-                voiceInterviewService.getVoiceInterviewHistory();
-            log.info("Retrieved {} voice interviews", history.size());
-            return ResponseEntity.ok(history);
+            VoiceInterviewDtos.VoiceInterviewHistoryResponse response = voiceInterviewService.getVoiceInterviewHistory();
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error fetching voice interview history", e);
-            throw new RuntimeException("Failed to fetch voice interview history: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new VoiceInterviewDtos.VoiceInterviewHistoryResponse(
+                            false,
+                            "Error: " + e.getMessage(),
+                            null
+                    ));
         }
     }
 
-    /**
-     * Получить детальную информацию о голосовом интервью
-     */
-    @GetMapping("/{interviewId}")
+    @GetMapping("/{sessionId}")
     public ResponseEntity<VoiceInterviewDtos.VoiceInterviewDetailResponse> getVoiceInterviewDetails(
-            @PathVariable String interviewId) {
+            @PathVariable String sessionId) {
         try {
-            log.info("Fetching voice interview details for: {}", interviewId);
-            VoiceInterviewDtos.VoiceInterviewDetailResponse details = 
-                voiceInterviewService.getVoiceInterviewDetails(interviewId);
-            log.info("Voice interview details retrieved successfully");
-            return ResponseEntity.ok(details);
+            log.info("Fetching voice interview details for: {}", sessionId);
+            VoiceInterviewDtos.VoiceInterviewDetailsResponse response = voiceInterviewService.getVoiceInterviewDetails(sessionId);
+            
+            return ResponseEntity.ok(new VoiceInterviewDtos.VoiceInterviewDetailResponse(
+                    response.isSuccess(),
+                    response.getMessage(),
+                    response.getInterview(),
+                    response.getMessages()
+            ));
         } catch (Exception e) {
             log.error("Error fetching voice interview details", e);
-            throw new RuntimeException("Failed to fetch voice interview details: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new VoiceInterviewDtos.VoiceInterviewDetailResponse(
+                            false,
+                            "Error: " + e.getMessage(),
+                            null,
+                            null
+                    ));
         }
     }
 
-    /**
-     * Завершить голосовое интервью
-     */
-    @PostMapping("/{interviewId}/complete")
-    public ResponseEntity<Void> completeVoiceInterview(@PathVariable String interviewId) {
+    @PostMapping("/{sessionId}/complete")
+    public ResponseEntity<VoiceInterviewDtos.VoiceInterviewResponse> completeVoiceInterview(
+            @PathVariable String sessionId) {
         try {
-            log.info("Completing voice interview: {}", interviewId);
-            voiceInterviewService.completeVoiceInterview(interviewId);
-            log.info("Voice interview completed successfully");
-            return ResponseEntity.ok().build();
+            log.info("Completing voice interview: {}", sessionId);
+            VoiceInterviewDtos.VoiceInterviewResponse response = voiceInterviewService.completeVoiceInterview(sessionId);
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             log.error("Error completing voice interview", e);
-            throw new RuntimeException("Failed to complete voice interview: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new VoiceInterviewDtos.VoiceInterviewResponse(
+                            false,
+                            "Error: " + e.getMessage(),
+                            null
+                    ));
         }
     }
 }

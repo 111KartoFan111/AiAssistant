@@ -1,139 +1,120 @@
 package com.zharkyn.aiassistant_backend.controller;
 
-import com.zharkyn.aiassistant_backend.dto.AnalyticsDtos;
+import com.itextpdf.text.DocumentException;
 import com.zharkyn.aiassistant_backend.service.ExportService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.concurrent.ExecutionException;
-
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * REST контроллер для экспорта данных
- */
-@Slf4j
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+
 @RestController
 @RequestMapping("/api/v1/export")
-@RequiredArgsConstructor
+@CrossOrigin(origins = "*")
+@Slf4j
 public class ExportController {
 
     private final ExportService exportService;
 
-    /**
-     * Экспортировать историю интервью в CSV
-     */
+    @Autowired
+    public ExportController(ExportService exportService) {
+        this.exportService = exportService;
+    }
+
     @PostMapping("/csv")
-    public ResponseEntity<byte[]> exportToCSV(
-            @Valid @RequestBody AnalyticsDtos.ExportRequest request) {
+    public ResponseEntity<byte[]> exportToCSV(@RequestBody Map<String, List<String>> request) {
         try {
-            log.info("Exporting {} interviews to CSV", request.getInterviewIds().size());
+            List<String> interviewIds = request.get("interviewIds");
+            log.info("Exporting {} interviews to CSV", interviewIds.size());
             
-            byte[] csvData = exportService.exportToCSV(request.getInterviewIds());
+            byte[] csvData = exportService.exportToCSV(interviewIds);
             
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("text/csv"));
             headers.setContentDispositionFormData("attachment", "interviews.csv");
-            headers.setContentLength(csvData.length);
             
-            log.info("CSV export completed");
             return ResponseEntity.ok()
                     .headers(headers)
                     .body(csvData);
                     
         } catch (Exception e) {
             log.error("Error exporting to CSV", e);
-            throw new RuntimeException("Failed to export to CSV: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    /**
-     * Экспортировать детальный отчет в HTML (для конвертации в PDF на клиенте)
-     */
-    @PostMapping("/pdf-html")
-    public ResponseEntity<String> exportToPDFHtml(
-            @Valid @RequestBody AnalyticsDtos.ExportRequest request) {
+    @PostMapping("/pdf")
+    public ResponseEntity<byte[]> exportToPDF(@RequestBody Map<String, List<String>> request) {
         try {
-            log.info("Generating PDF HTML for {} interviews", request.getInterviewIds().size());
+            List<String> interviewIds = request.get("interviewIds");
+            log.info("Exporting {} interviews to PDF", interviewIds.size());
             
-            String html = exportService.exportToPDFHtml(request.getInterviewIds());
+            byte[] pdfData = exportService.exportToPDFHtml(interviewIds);
             
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.TEXT_HTML);
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "interviews.pdf");
             
-            log.info("PDF HTML generation completed");
             return ResponseEntity.ok()
                     .headers(headers)
-                    .body(html);
+                    .body(pdfData);
                     
         } catch (Exception e) {
-            log.error("Error generating PDF HTML", e);
-            throw new RuntimeException("Failed to generate PDF HTML: " + e.getMessage(), e);
+            log.error("Error exporting to PDF", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    /**
-     * Сохранить интервью как черновик
-     */
-    @PostMapping("/interviews/{interviewId}/draft")
-    public ResponseEntity<Void> saveDraft(@PathVariable String interviewId) {
+    @PostMapping("/{interviewId}/draft")
+    public ResponseEntity<Map<String, String>> saveDraft(@PathVariable String interviewId) {
         try {
-            log.info("Saving interview {} as draft", interviewId);
-            exportService.saveDraft(interviewId);
-            log.info("Interview saved as draft");
-            return ResponseEntity.ok().build();
+            log.info("Saving draft for interview: {}", interviewId);
+            String result = exportService.saveDraft(interviewId);
+            return ResponseEntity.ok(Map.of("message", result));
         } catch (Exception e) {
             log.error("Error saving draft", e);
-            throw new RuntimeException("Failed to save draft: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 
-    /**
-     * Поставить интервью на паузу
-     */
-    @PostMapping("/interviews/{interviewId}/pause")
-    public ResponseEntity<Void> pauseInterview(@PathVariable String interviewId) {
+    @PostMapping("/{interviewId}/pause")
+    public ResponseEntity<Map<String, String>> pauseInterview(@PathVariable String interviewId) {
         try {
-            log.info("Pausing interview {}", interviewId);
-            exportService.pauseInterview(interviewId);
-            log.info("Interview paused");
-            return ResponseEntity.ok().build();
+            log.info("Pausing interview: {}", interviewId);
+            String result = exportService.pauseInterview(interviewId);
+            return ResponseEntity.ok(Map.of("message", result));
         } catch (Exception e) {
             log.error("Error pausing interview", e);
-            throw new RuntimeException("Failed to pause interview: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
         }
     }
-    /**
-     * Экспортировать результаты интервью в PDF
-     */
-    @GetMapping("/{interviewId}")
-    public ResponseEntity<ByteArrayResource> exportInterviewPDF(@PathVariable String interviewId) {
+
+    @GetMapping("/{interviewId}/pdf")
+    public ResponseEntity<byte[]> exportInterviewToPDF(@PathVariable String interviewId) {
         try {
-            log.info("Exporting interview {} to PDF", interviewId);
-            byte[] pdfBytes = exportService.exportInterviewToPDF(interviewId);
+            log.info("Exporting single interview to PDF: {}", interviewId);
             
-            ByteArrayResource resource = new ByteArrayResource(pdfBytes);
+            byte[] pdfData = exportService.exportInterviewToPDF(interviewId);
             
             HttpHeaders headers = new HttpHeaders();
-            headers.add(HttpHeaders.CONTENT_DISPOSITION, 
-                String.format("attachment; filename=interview-%s.pdf", interviewId));
-            headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE);
-            
-            log.info("PDF exported successfully for interview: {}", interviewId);
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "interview_" + interviewId + ".pdf");
             
             return ResponseEntity.ok()
                     .headers(headers)
-                    .contentLength(pdfBytes.length)
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(resource);
-        } catch (ExecutionException | InterruptedException e) {
+                    .body(pdfData);
+                    
+        } catch (ExecutionException | InterruptedException | DocumentException e) {
             log.error("Error exporting interview to PDF", e);
-            throw new RuntimeException("Failed to export interview: " + e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }

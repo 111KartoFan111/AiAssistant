@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { voiceInterviewService } from '../services/voiceInterviewService';
+import { Mic, Square } from 'lucide-react';
 import './VoiceInterview.css';
 
 function VoiceInterview() {
@@ -12,6 +13,7 @@ function VoiceInterview() {
     const [isRecording, setIsRecording] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [aiSpeaking, setAiSpeaking] = useState(false);
+    const [error, setError] = useState(null);
     
     const mediaRecorderRef = useRef(null);
     const audioChunksRef = useRef([]);
@@ -19,16 +21,23 @@ function VoiceInterview() {
     const audioElementRef = useRef(null);
 
     useEffect(() => {
-        loadInterview();
-    }, [id]);
+        // ✅ ИСПРАВЛЕНИЕ: Проверяем что id существует и валиден
+        if (id && id !== 'undefined') {
+            loadInterview();
+        } else {
+            setError('Неверный ID интервью');
+        }
+    }, [id]); // Добавляем id в зависимости
 
     const loadInterview = async () => {
         try {
+            setError(null);
             const data = await voiceInterviewService.getInterviewDetails(id);
             setInterview(data.interview);
             setMessages(data.messages || []);
         } catch (error) {
             console.error('Failed to load interview:', error);
+            setError('Не удалось загрузить интервью');
         }
     };
 
@@ -45,7 +54,6 @@ function VoiceInterview() {
                 } 
             });
             
-            // Используем audio/webm для лучшей совместимости
             const mimeType = 'audio/webm;codecs=opus';
             
             mediaRecorderRef.current = new MediaRecorder(stream, {
@@ -79,7 +87,7 @@ function VoiceInterview() {
                 stream.getTracks().forEach(track => track.stop());
             };
             
-            mediaRecorderRef.current.start(100); // Собираем данные каждые 100мс
+            mediaRecorderRef.current.start(100);
             setIsRecording(true);
             console.log('Recording started successfully');
             
@@ -106,10 +114,7 @@ function VoiceInterview() {
             console.log('Response received:', response);
             
             if (response.success && response.aiResponse) {
-                // Обновляем сообщения
                 await loadInterview();
-                
-                // Воспроизводим ответ AI
                 speakText(response.aiResponse);
             }
         } catch (error) {
@@ -143,6 +148,20 @@ function VoiceInterview() {
             console.error('Speech synthesis not supported');
         }
     };
+
+    // ✅ ИСПРАВЛЕНИЕ: Показываем ошибку если есть
+    if (error) {
+        return (
+            <div className="voice-interview-container">
+                <div className="error-message">
+                    <p>{error}</p>
+                    <button onClick={() => navigate('/voice-interview-setup')}>
+                        Вернуться назад
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     if (!interview) {
         return (
