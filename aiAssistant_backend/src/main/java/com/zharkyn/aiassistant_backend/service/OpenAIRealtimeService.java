@@ -11,9 +11,15 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Сервис для работы с OpenAI Realtime API
@@ -56,6 +62,33 @@ public class OpenAIRealtimeService {
             throw new RuntimeException("Failed to initialize realtime session: " + e.getMessage(), e);
         }
     }
+    public byte[] convertToPCM16(File inputFile) throws IOException, InterruptedException {
+        ProcessBuilder pb = new ProcessBuilder(
+            "ffmpeg",
+            "-i", inputFile.getAbsolutePath(),
+            "-ac", "1",           // mono
+            "-ar", "16000",       // 16 kHz
+            "-f", "s16le",        // raw PCM 16-bit little endian
+            "pipe:1"              // output to stdout
+        );
+
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        try (InputStream is = process.getInputStream()) {
+            is.transferTo(buffer);
+        }
+
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            throw new RuntimeException("ffmpeg conversion failed with code: " + exitCode);
+        }
+
+        log.info("Converted audio to PCM16: {} bytes", buffer.size());
+        return buffer.toByteArray();
+    }
+
 
     /**
      * Отправить аудио данные в сессию
@@ -72,6 +105,7 @@ public class OpenAIRealtimeService {
         log.debug("Sent audio chunk, size: {} bytes", audioData.length);
     }
 
+    
     /**
      * Завершить ввод аудио и получить транскрипцию
      */
