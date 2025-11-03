@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -50,6 +51,7 @@ public class OpenAIRealtimeService {
         headers.set("OpenAI-Beta", "realtime=v1");
 
         WebSocketHttpHeaders wsHeaders = new WebSocketHttpHeaders(headers);
+        wsHeaders.setSecWebSocketProtocol(Collections.singletonList("openai-realtime"));
 
         try {
             session = client.execute(new RealtimeWebSocketHandler(), wsHeaders, uri).get();

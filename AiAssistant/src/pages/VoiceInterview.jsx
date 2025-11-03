@@ -2,10 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { voiceInterviewService } from '../services/voiceInterviewService';
 import { Mic, Square } from 'lucide-react';
-import './VoiceInterview.css';
 
 function VoiceInterview() {
-    const { id } = useParams();
+    const { interviewId } = useParams();
     const navigate = useNavigate();
     
     const [interview, setInterview] = useState(null);
@@ -19,20 +18,21 @@ function VoiceInterview() {
     const audioChunksRef = useRef([]);
     const audioContextRef = useRef(null);
     const audioElementRef = useRef(null);
+    const chatEndRef = useRef(null);
 
     useEffect(() => {
-        // ✅ ИСПРАВЛЕНИЕ: Проверяем что id существует и валиден
-        if (id && id !== 'undefined') {
+        // ✅ Проверяем, что параметр маршрута существует и валиден
+        if (interviewId && interviewId !== 'undefined') {
             loadInterview();
         } else {
             setError('Неверный ID интервью');
         }
-    }, [id]); // Добавляем id в зависимости
+    }, [interviewId]);
 
     const loadInterview = async () => {
         try {
             setError(null);
-            const data = await voiceInterviewService.getInterviewDetails(id);
+            const data = await voiceInterviewService.getInterviewDetails(interviewId);
             setInterview(data.interview);
             setMessages(data.messages || []);
         } catch (error) {
@@ -110,7 +110,7 @@ function VoiceInterview() {
             setIsProcessing(true);
             console.log('Submitting audio, size:', audioBlob.size);
             
-            const response = await voiceInterviewService.submitAudioAnswer(id, audioBlob);
+            const response = await voiceInterviewService.submitAudioAnswer(interviewId, audioBlob);
             console.log('Response received:', response);
             
             if (response.success && response.aiResponse) {
@@ -119,7 +119,8 @@ function VoiceInterview() {
             }
         } catch (error) {
             console.error('Error submitting audio:', error);
-            alert('Ошибка при отправке аудио: ' + error.message);
+            const serverMsg = error?.response?.data?.message || error.message;
+            alert('Ошибка при отправке аудио: ' + serverMsg);
         } finally {
             setIsProcessing(false);
         }
@@ -149,15 +150,24 @@ function VoiceInterview() {
         }
     };
 
-    // ✅ ИСПРАВЛЕНИЕ: Показываем ошибку если есть
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    // Ошибка
     if (error) {
         return (
-            <div className="voice-interview-container">
-                <div className="error-message">
-                    <p>{error}</p>
-                    <button onClick={() => navigate('/voice-interview-setup')}>
-                        Вернуться назад
-                    </button>
+            <div className="min-h-screen bg-gray-50">
+                <div className="max-w-3xl mx-auto px-6 pt-10">
+                    <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-6">
+                        <p className="font-medium mb-3">{error}</p>
+                        <button
+                            onClick={() => navigate('/voice-interview-setup')}
+                            className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg"
+                        >
+                            Вернуться назад
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -165,67 +175,86 @@ function VoiceInterview() {
 
     if (!interview) {
         return (
-            <div className="voice-interview-container">
-                <div className="loading">Загрузка...</div>
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-gray-600">Загрузка...</div>
             </div>
         );
     }
 
     return (
-        <div className="voice-interview-container">
-            <div className="interview-header">
-                <h2>{interview.positionTitle}</h2>
-                <p className="company-name">{interview.companyName}</p>
-            </div>
-
-            <div className="messages-container">
-                {messages.length === 0 ? (
-                    <div className="no-messages">
-                        <p>Нажмите на микрофон чтобы начать интервью</p>
+        <div className="min-h-screen bg-gray-100 flex flex-col">
+            {/* Sticky page header */}
+            <header className="bg-white shadow-sm sticky top-0 z-10">
+                <div className="max-w-4xl mx-auto px-6 py-4">
+                    <h2 className="text-xl font-semibold text-gray-900">{interview.positionTitle}</h2>
+                    {interview.companyName && (
+                        <p className="text-sm text-gray-600 mt-1">{interview.companyName}</p>
+                    )}
+                    <div className="mt-2 flex items-center gap-2">
+                        {aiSpeaking && (
+                            <span className="inline-flex items-center gap-2 text-sm text-green-700 bg-green-100 border border-green-200 rounded-full px-3 py-1">
+                                <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
+                                AI говорит
+                            </span>
+                        )}
+                        {isProcessing && (
+                            <span className="inline-flex items-center gap-2 text-sm text-blue-700 bg-blue-100 border border-blue-200 rounded-full px-3 py-1">
+                                <span className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
+                                Обработка...
+                            </span>
+                        )}
                     </div>
-                ) : (
-                    messages.map((message, index) => (
-                        <div key={index} className={`message ${message.sender}`}>
-                            <div className="message-content">
-                                {message.textContent || "🎤 Аудио сообщение"}
+                </div>
+            </header>
+
+            {/* Content */}
+            <main className="flex-1 p-6 flex justify-center">
+                <div className="w-full max-w-4xl flex flex-col">
+                    {/* Messages */}
+                    <div className="flex-1 space-y-6 overflow-y-auto p-4 bg-white rounded-t-xl shadow-inner">
+                        {messages.length === 0 ? (
+                            <div className="text-center text-gray-600 py-6">
+                                Нажмите на микрофон чтобы начать интервью
                             </div>
-                        </div>
-                    ))
-                )}
-            </div>
+                        ) : (
+                            messages.map((message, index) => (
+                                <div key={index} className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-lg p-4 rounded-2xl ${
+                                        message.sender === 'user'
+                                            ? 'bg-blue-500 text-white'
+                                            : 'bg-gray-200 text-gray-800'
+                                    }`}>
+                                        {message.textContent || '🎤 Аудио сообщение'}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                        <div ref={chatEndRef} />
+                    </div>
 
-            <div className="interview-controls">
-                {aiSpeaking && (
-                    <div className="ai-speaking-indicator">
-                        AI is speaking...
+                    {/* Controls */}
+                    <div className="bg-white p-4 border-t border-gray-200 rounded-b-xl">
+                        {!isRecording ? (
+                            <button
+                                className="inline-flex items-center gap-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-3 rounded-xl transition disabled:bg-gray-400"
+                                onClick={startRecording}
+                                disabled={isProcessing || aiSpeaking}
+                            >
+                                <Mic size={22} />
+                                <span>Нажмите микрофон для ответа</span>
+                            </button>
+                        ) : (
+                            <button
+                                className="inline-flex items-center gap-3 bg-red-500 hover:bg-red-600 text-white font-semibold px-5 py-3 rounded-xl transition"
+                                onClick={stopRecording}
+                            >
+                                <Square size={22} />
+                                <span>Остановить запись</span>
+                            </button>
+                        )}
                     </div>
-                )}
-                
-                {!isRecording ? (
-                    <button 
-                        className="record-button" 
-                        onClick={startRecording}
-                        disabled={isProcessing || aiSpeaking}
-                    >
-                        <Mic size={32} />
-                        <span>Нажмите микрофон для ответа</span>
-                    </button>
-                ) : (
-                    <button 
-                        className="record-button recording" 
-                        onClick={stopRecording}
-                    >
-                        <Square size={32} />
-                        <span>Остановить запись</span>
-                    </button>
-                )}
-                
-                {isProcessing && (
-                    <div className="processing-indicator">
-                        Обработка...
-                    </div>
-                )}
-            </div>
+                </div>
+            </main>
         </div>
     );
 }

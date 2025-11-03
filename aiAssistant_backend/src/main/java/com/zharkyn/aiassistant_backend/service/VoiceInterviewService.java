@@ -11,6 +11,7 @@ import com.zharkyn.aiassistant_backend.repository.VoiceInterviewRepository;
 import com.zharkyn.aiassistant_backend.repository.VoiceMessageRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -24,14 +25,17 @@ import java.util.concurrent.ExecutionException;
 @Slf4j
 public class VoiceInterviewService {
     
-    private final OpenAIRealtimeService openAIService;
+    private final OpenAIChatService openAIService;
     private final VoiceInterviewRepository voiceInterviewRepository;
     private final VoiceMessageRepository voiceMessageRepository;
 
+    @Value("${firebase.storage.bucket:}")
+    private String storageBucket;
+
     @Autowired
-    public VoiceInterviewService(OpenAIRealtimeService openAIService,
-                                  VoiceInterviewRepository voiceInterviewRepository,
-                                  VoiceMessageRepository voiceMessageRepository) {
+    public VoiceInterviewService(OpenAIChatService openAIService,
+                                 VoiceInterviewRepository voiceInterviewRepository,
+                                 VoiceMessageRepository voiceMessageRepository) {
         this.openAIService = openAIService;
         this.voiceInterviewRepository = voiceInterviewRepository;
         this.voiceMessageRepository = voiceMessageRepository;
@@ -88,11 +92,16 @@ public class VoiceInterviewService {
                  audioBytes.length, audioFile.getContentType());
 
         String audioFileName = "voice_answers/" + sessionId + "/" + System.currentTimeMillis() + ".webm";
-        Bucket bucket = StorageClient.getInstance().bucket();
+
+        if (storageBucket == null || storageBucket.isBlank()) {
+            throw new IllegalStateException("Firebase storage bucket is not configured.");
+        }
+        String bucketName = normalizeBucket(storageBucket);
+        Bucket bucket = StorageClient.getInstance().bucket(bucketName);
         
         Blob blob = bucket.create(audioFileName, audioBytes, "audio/webm");
         String audioUrl = blob.getMediaLink();
-        log.info("Audio file saved to Storage: {}", audioFileName);
+        log.info("Audio file saved to Storage: {} in bucket {}", audioFileName, bucketName);
 
         VoiceMessage userMessage = new VoiceMessage();
         userMessage.setSessionId(sessionId);
@@ -103,7 +112,7 @@ public class VoiceInterviewService {
 
         String aiResponse;
         try {
-            log.info("Sending audio to OpenAI Realtime API...");
+            log.info("Transcribing audio and generating response via OpenAI REST API...");
             aiResponse = openAIService.sendAudioAndGetResponse(audioBytes);
             log.info("AI response received: {}", aiResponse);
         } catch (Exception e) {
@@ -201,5 +210,19 @@ public class VoiceInterviewService {
             throw new IllegalStateException("User not authenticated");
         }
         return authentication.getName();
+    }
+    private String normalizeBucket(String bucket) {
+        String b = bucket == null ? "" : bucket.trim();
+        if (b.startsWith("gs://")) {
+            b = b.substring(5);
+        }
+        int slashIdx = b.indexOf('/');
+        if (slashIdx > -1) {
+            b = b.substring(0, slashIdx);
+        }
+        if (b.endsWith("/")) {
+            b = b.substring(0, b.length() - 1);
+        }
+        return b;
     }
 }

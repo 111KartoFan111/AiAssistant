@@ -55,7 +55,7 @@ public class VoiceInterviewController {
             @RequestParam("audio") MultipartFile audioFile) {
         try {
             log.info("Submitting audio answer for interview: {}, file size: {} bytes", 
-                    sessionId, audioFile.getSize());
+                    sessionId, audioFile != null ? audioFile.getSize() : -1);
             
             VoiceInterviewAnswerResponse response = voiceInterviewService.processAudioAnswer(sessionId, audioFile);
             
@@ -65,6 +65,15 @@ public class VoiceInterviewController {
                     response.getAiResponse(),
                     response.getAiMessageId()
             ));
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("Bad request processing audio answer: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new VoiceInterviewDtos.VoiceResponseDto(
+                            false,
+                            e.getMessage(),
+                            null,
+                            null
+                    ));
         } catch (IOException | ExecutionException | InterruptedException e) {
             log.error("Error processing audio answer", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

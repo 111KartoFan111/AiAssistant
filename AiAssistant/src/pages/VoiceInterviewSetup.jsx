@@ -23,10 +23,10 @@ const VoiceInterviewSetup = () => {
       const response = await axios.post(
         'http://localhost:8080/api/v1/voice-interviews/start',
         { 
-          position, 
-          jobDescription, 
-          language,
-          company 
+          positionTitle: position,
+          companyName: company,
+          jobDescription,
+          // difficulty could be added if you support it on UI
         },
         {
           headers: {
@@ -36,8 +36,8 @@ const VoiceInterviewSetup = () => {
         }
       );
 
-      const { interviewId } = response.data;
-      navigate(`/voice-interview/${interviewId}`);
+      const { sessionId } = response.data;
+      navigate(`/voice-interview/${sessionId}`);
     } catch (err) {
       setError('Не удалось начать голосовое интервью. Попробуйте ещё раз.');
       console.error('Start voice interview error:', err);

@@ -34,8 +34,8 @@ const voiceInterviewService = {
                 formData,
                 {
                     headers: {
-                        'Authorization': `Bearer ${getAuthToken()}`,
-                        'Content-Type': 'multipart/form-data'
+                        'Authorization': `Bearer ${getAuthToken()}`
+                        // Do NOT set 'Content-Type' for FormData; the browser will add proper boundary
                     }
                 }
             );
