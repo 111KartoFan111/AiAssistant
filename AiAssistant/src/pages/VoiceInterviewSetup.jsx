@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import Header from '../components/Header';
-import InterviewService from '../services/interviewService';
-import { Swiper, SwiperSlide } from 'swiper/react';
-import 'swiper/css';
 
 const VoiceInterviewSetup = () => {
   const navigate = useNavigate();
@@ -21,27 +19,29 @@ const VoiceInterviewSetup = () => {
     setError('');
 
     try {
-      const response = await InterviewService.startVoiceInterview({ 
-        position, 
-        jobDescription, 
-        language,
-        company 
-      });
-      const { interviewId, firstQuestion, questionType, currentQuestionNumber, totalQuestions } = response.data;
-
-      navigate('/voice-interview', {
-        state: {
-          interviewId,
-          initialQuestion: firstQuestion,
-          position,
-          questionType,
-          currentQuestionNumber,
-          totalQuestions
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        'http://localhost:8080/api/v1/voice-interviews/start',
+        { 
+          position, 
+          jobDescription, 
+          language,
+          company 
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
-      });
+      );
+
+      const { interviewId } = response.data;
+      navigate(`/voice-interview/${interviewId}`);
     } catch (err) {
-      setError('Failed to start voice interview. Please try again.');
+      setError('Не удалось начать голосовое интервью. Попробуйте ещё раз.');
       console.error('Start voice interview error:', err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -144,7 +144,6 @@ const VoiceInterviewSetup = () => {
           <p className="text-gray-600 mb-8">Настройте параметры голосового интервью (20 вопросов)</p>
 
           <form onSubmit={handleStartInterview} className="space-y-6">
-            {/* Interview Language */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Язык интервью *
@@ -162,61 +161,53 @@ const VoiceInterviewSetup = () => {
                     className={`flex items-center justify-center p-4 rounded-lg border-2 transition-all ${
                       language === lang.id
                         ? 'border-[#3D2D4C] bg-[#3D2D4C] bg-opacity-10'
-                        : 'border-gray-200 hover:border-[#3D2D4C]'
+                        : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <span className="text-xl mr-2">{lang.flag}</span>
-                    <span className="font-medium">{lang.name}</span>
+                    <span className="text-2xl mr-2">{lang.flag}</span>
+                    <span className="font-medium text-gray-900">{lang.name}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Select Company */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
-                Выберите компанию (Опционально)
+                Компания (Опционально)
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                 {companies.map((comp) => (
                   <button
                     key={comp.id}
                     type="button"
-                    onClick={() => setCompany(comp.id)}
-                    className={`group p-4 rounded-xl border-2 transition-all duration-300 ${
+                    onClick={() => setCompany(comp.id === company ? '' : comp.id)}
+                    className={`group p-3 rounded-xl border-2 transition-all ${
                       company === comp.id
-                        ? 'border-[#3D2D4C] bg-[#3D2D4C] bg-opacity-10'
-                        : `border-gray-200 ${comp.hoverColor} ${comp.hoverBg}`
+                        ? 'border-[#3D2D4C] bg-[#3D2D4C] bg-opacity-5'
+                        : 'border-gray-200 hover:border-gray-300'
                     }`}
+                    title={comp.name}
                   >
-                    <div className="h-12 mb-2 flex items-center justify-center">
-                      <img 
-                        src={comp.logo} 
-                        alt={comp.name}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    </div>
-                    <div className="font-medium text-xs text-center text-gray-700">
-                      {comp.name}
-                    </div>
+                    <img 
+                      src={comp.logo} 
+                      alt={comp.name}
+                      className="w-full h-12 object-contain"
+                    />
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Field / Industry */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Сфера / Индустрия *
+                Сфера деятельности *
               </label>
               <select
                 value={field}
                 onChange={(e) => setField(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#3D2D4C] focus:border-transparent outline-none transition"
-                required
               >
-                <option value="">Выберите сферу</option>
-                <option value="it">Информационные технологии</option>
+                <option value="it">IT и Технологии</option>
                 <option value="finance">Финансы</option>
                 <option value="marketing">Маркетинг</option>
                 <option value="engineering">Инженерия</option>
@@ -224,7 +215,6 @@ const VoiceInterviewSetup = () => {
               </select>
             </div>
 
-            {/* Position */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Должность *
@@ -239,7 +229,6 @@ const VoiceInterviewSetup = () => {
               />
             </div>
 
-            {/* Job Description */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Описание вакансии (Опционально)
@@ -253,7 +242,6 @@ const VoiceInterviewSetup = () => {
               />
             </div>
 
-            {/* Voice Interview Info */}
             <div className="bg-[#3D2D4C] bg-opacity-10 border-l-4 border-[#3D2D4C] p-4 rounded">
               <div className="flex items-start">
                 <span className="text-[#3D2D4C] text-xl mr-3">🎙️</span>
