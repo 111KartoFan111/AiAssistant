@@ -26,7 +26,7 @@ public class OpenAIRealtimeService {
     @Value("${openai.api.key}")
     private String apiKey;
 
-    private static final String REALTIME_API_URL = "wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01";
+    private static final String REALTIME_API_URL = "wss://api.openai.com/v1/realtime?model=gpt-realtime-2025-08-25";
     
     private final ObjectMapper objectMapper = new ObjectMapper();
 

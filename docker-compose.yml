@@ -11,10 +11,10 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - JWT_SECRET=${JWT_SECRET:-bXktc3VwZXItc2VjcmV0LWtleS1mb3Itand0LXNlY3JldC1rZXktYXV0aGVudGljYXRpb24=}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-AIzaSyD2YxTN3q9ttP1BTL-RCviBx4hX9UBHB0c}
       - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY=DEBUG
       - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB_CORS=DEBUG
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-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}
     volumes:
       - ./aiAssistant_backend/src/main/resources/serviceAccountKey.json:/app/serviceAccountKey.json:ro
     restart: unless-stopped
