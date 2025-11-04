@@ -1,7 +1,8 @@
 package com.zharkyn.aiassistant_backend.dto;
 
 import com.zharkyn.aiassistant_backend.model.Resume;
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -16,7 +17,8 @@ public class ResumeDtos {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CreateResumeRequest {
-        @NotEmpty(message = "Personal info is required")
+        @NotNull(message = "Personal info is required")
+        @Valid
         private Resume.PersonalInfo personalInfo;
         
         private String summary;
@@ -31,6 +33,7 @@ public class ResumeDtos {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class UpdateResumeRequest {
+        @Valid
         private Resume.PersonalInfo personalInfo;
         private String summary;
         private List<String> skills;

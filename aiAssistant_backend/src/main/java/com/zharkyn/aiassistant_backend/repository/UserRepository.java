@@ -39,8 +39,18 @@ public class UserRepository {
         }
         return Optional.empty();
     }
+
+    public Optional<User> findById(String id) throws ExecutionException, InterruptedException {
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        var doc = dbFirestore.collection(COLLECTION_NAME).document(id).get().get();
+        if (doc.exists()) {
+            return Optional.of(doc.toObject(User.class));
+        }
+        return Optional.empty();
+    }
+
     public void deleteById(String userId) throws ExecutionException, InterruptedException {
-    Firestore dbFirestore = FirestoreClient.getFirestore();
-    dbFirestore.collection(COLLECTION_NAME).document(userId).delete().get();
-}
+        Firestore dbFirestore = FirestoreClient.getFirestore();
+        dbFirestore.collection(COLLECTION_NAME).document(userId).delete().get();
+    }
 }

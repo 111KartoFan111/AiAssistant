@@ -26,9 +26,14 @@ public class ResumeController {
             @Valid @RequestBody ResumeDtos.CreateResumeRequest request) 
             throws ExecutionException, InterruptedException {
         log.info("Creating resume for current user");
-        ResumeDtos.ResumeResponse response = resumeService.createOrUpdateResume(request);
-        log.info("Resume created successfully with id: {}", response.getId());
-        return ResponseEntity.ok(response);
+        try {
+            ResumeDtos.ResumeResponse response = resumeService.createOrUpdateResume(request);
+            log.info("Resume created successfully with id: {}", response.getId());
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            log.error("Failed to create resume", ex);
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     /**
@@ -38,8 +43,15 @@ public class ResumeController {
     public ResponseEntity<ResumeDtos.ResumeResponse> getMyResume() 
             throws ExecutionException, InterruptedException {
         log.info("Fetching resume for current user");
-        ResumeDtos.ResumeResponse response = resumeService.getMyResume();
-        return ResponseEntity.ok(response);
+        try {
+            ResumeDtos.ResumeResponse response = resumeService.getMyResume();
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("resume not found")) {
+                return ResponseEntity.notFound().build();
+            }
+            throw ex;
+        }
     }
 
     /**
@@ -50,9 +62,14 @@ public class ResumeController {
             @Valid @RequestBody ResumeDtos.UpdateResumeRequest request) 
             throws ExecutionException, InterruptedException {
         log.info("Updating resume for current user");
-        ResumeDtos.ResumeResponse response = resumeService.updateResume(request);
-        log.info("Resume updated successfully");
-        return ResponseEntity.ok(response);
+        try {
+            ResumeDtos.ResumeResponse response = resumeService.updateResume(request);
+            log.info("Resume updated successfully");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            log.error("Failed to update resume", ex);
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     /**

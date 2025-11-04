@@ -1,6 +1,8 @@
 package com.zharkyn.aiassistant_backend.model;
 
 import com.google.cloud.Timestamp;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -29,9 +31,14 @@ public class Resume {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class PersonalInfo {
+        @NotBlank(message = "Name is required")
         private String name;
+        
         private String title;
+        
+        @Email(message = "Invalid email format")
         private String email;
+        
         private String phone;
         private String location;
         private String linkedin;

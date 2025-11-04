@@ -233,7 +233,14 @@ function VoiceInterview() {
                     </div>
 
                     {/* Controls */}
-                    <div className="bg-white p-4 border-t border-gray-200 rounded-b-xl">
+                    <div className="bg-white p-4 border-t border-gray-200 rounded-b-xl flex items-center justify-between">
+                        <button
+                            onClick={async () => { try { await voiceInterviewService.completeInterview(interviewId); } finally { navigate('/progress'); } }}
+                            className="text-red-600 hover:text-red-700 font-semibold px-4 py-2 rounded-lg border border-red-200 hover:bg-red-50"
+                        >
+                            Завершить интервью
+                        </button>
+
                         {!isRecording ? (
                             <button
                                 className="inline-flex items-center gap-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold px-5 py-3 rounded-xl transition disabled:bg-gray-400"

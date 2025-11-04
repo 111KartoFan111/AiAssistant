@@ -1,10 +1,36 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
+import ProgressService from '../services/progressService';
+import { voiceInterviewService } from '../services/voiceInterviewService';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState('new-interview');
+  const [stats, setStats] = useState({ totalText: 0, avgScore: null, voiceCount: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const [progressRes, voiceHistory] = await Promise.all([
+          ProgressService.getProgressAnalytics(),
+          voiceInterviewService.getHistory().catch(() => ({ interviews: [] }))
+        ]);
+        const totalText = progressRes?.data?.totalInterviews || 0;
+        const avgScore = progressRes?.data?.averageScore ?? null;
+        const voiceCount = Array.isArray(voiceHistory?.interviews) ? voiceHistory.interviews.length : 0;
+        setStats({ totalText, avgScore, voiceCount });
+      } catch (e) {
+        setError('Не удалось загрузить статистику');
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, []);
 
   const menuItems = [
     {
@@ -121,6 +147,11 @@ const Dashboard = () => {
             <p className="text-gray-600 mb-8">Выберите действие из меню слева</p>
             
             {/* Welcome card */}
+            {error && (
+              <div className="mb-4 bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                <p className="text-red-700">{error}</p>
+              </div>
+            )}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-6">
               <div className="flex items-start gap-6">
                 <div className="w-16 h-16 bg-[#3D2D4C] rounded-2xl flex items-center justify-center flex-shrink-0">
@@ -159,9 +190,9 @@ const Dashboard = () => {
                       <path d="M9 2C6.24 2 4 4.24 4 7v10c0 2.76 2.24 5 5 5h9c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2h-3V5c0-1.66-1.34-3-3-3H9z"/>
                     </svg>
                   </div>
-                  <h3 className="text-sm font-medium text-gray-600">Интервью пройдено</h3>
+                  <h3 className="text-sm font-medium text-gray-600">Текстовых интервью (завершено)</h3>
                 </div>
-                <p className="text-3xl font-bold text-gray-900">0</p>
+                <p className="text-3xl font-bold text-gray-900">{loading ? '—' : stats.totalText}</p>
               </div>
 
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -173,19 +204,19 @@ const Dashboard = () => {
                   </div>
                   <h3 className="text-sm font-medium text-gray-600">Средний балл</h3>
                 </div>
-                <p className="text-3xl font-bold text-gray-900">—</p>
+                <p className="text-3xl font-bold text-gray-900">{loading || stats.avgScore == null ? '—' : stats.avgScore.toFixed(1)}</p>
               </div>
 
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 bg-[#3D2D4C] bg-opacity-10 rounded-lg flex items-center justify-center">
                     <svg className="w-5 h-5 text-[#3D2D4C]" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
                     </svg>
                   </div>
-                  <h3 className="text-sm font-medium text-gray-600">Часов практики</h3>
+                  <h3 className="text-sm font-medium text-gray-600">Голосовых интервью</h3>
                 </div>
-                <p className="text-3xl font-bold text-gray-900">0</p>
+                <p className="text-3xl font-bold text-gray-900">{loading ? '—' : stats.voiceCount}</p>
               </div>
             </div>
           </div>

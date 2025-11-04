@@ -55,6 +55,25 @@ public class VoiceInterviewService {
         
         String interviewId = voiceInterviewRepository.create(interview);
         
+        // Let AI start the conversation with Question 1/20
+        try {
+            String firstQuestion = openAIService.generateNextQuestion(
+                    request.getPositionTitle(),
+                    request.getCompanyName(),
+                    request.getJobDescription(),
+                    1,
+                    ""
+            );
+            VoiceMessage aiMessage = new VoiceMessage();
+            aiMessage.setSessionId(interviewId);
+            aiMessage.setSender("assistant");
+            aiMessage.setTextContent(firstQuestion);
+            voiceMessageRepository.create(aiMessage);
+            log.info("Initial AI question saved for session {}", interviewId);
+        } catch (Exception e) {
+            log.error("Failed to generate initial AI question", e);
+        }
+        
         log.info("Voice interview started: {}", interviewId);
         
         return new VoiceInterviewDtos.VoiceInterviewResponse(
@@ -103,27 +122,57 @@ public class VoiceInterviewService {
         String audioUrl = blob.getMediaLink();
         log.info("Audio file saved to Storage: {} in bucket {}", audioFileName, bucketName);
 
+        // Transcribe user's audio
+        String transcript;
+        try {
+            log.info("Transcribing audio via OpenAI...");
+            transcript = openAIService.transcribeAudio(audioBytes);
+            log.info("Transcript received: {} chars", transcript != null ? transcript.length() : 0);
+        } catch (Exception e) {
+            log.error("Error transcribing audio", e);
+            transcript = null;
+        }
+
+        // Save user's message (audio + transcript)
         VoiceMessage userMessage = new VoiceMessage();
         userMessage.setSessionId(sessionId);
         userMessage.setSender("user");
         userMessage.setAudioUrl(audioUrl);
+        if (transcript != null && !transcript.isBlank()) {
+            userMessage.setTextContent(transcript);
+        }
         String userMessageId = voiceMessageRepository.create(userMessage);
         log.info("User message saved with ID: {}", userMessageId);
 
-        String aiResponse;
+        // Determine next question number based on how many assistant messages exist
+        int nextQuestionNumber = 1;
         try {
-            log.info("Transcribing audio and generating response via OpenAI REST API...");
-            aiResponse = openAIService.sendAudioAndGetResponse(audioBytes);
-            log.info("AI response received: {}", aiResponse);
+            List<VoiceMessage> existing = voiceMessageRepository.getBySessionId(sessionId);
+            long assistantCount = existing.stream().filter(m -> "assistant".equalsIgnoreCase(m.getSender())).count();
+            nextQuestionNumber = (int) assistantCount + 1;
+        } catch (Exception ex) {
+            log.warn("Could not compute next question number, defaulting to 1", ex);
+        }
+
+        String aiQuestion;
+        try {
+            log.info("Generating next AI question #{} via OpenAI...", nextQuestionNumber);
+            aiQuestion = openAIService.generateNextQuestion(
+                    interview.getPositionTitle(),
+                    interview.getCompanyName(),
+                    null,
+                    nextQuestionNumber,
+                    transcript == null ? "" : transcript
+            );
         } catch (Exception e) {
-            log.error("Error getting AI response", e);
-            aiResponse = "Извините, произошла ошибка при обработке вашего ответа. Попробуйте еще раз.";
+            log.error("Error generating AI question", e);
+            aiQuestion = "Извините, произошла ошибка при генерации следующего вопроса. Попробуйте еще раз.";
         }
 
         VoiceMessage aiMessage = new VoiceMessage();
         aiMessage.setSessionId(sessionId);
         aiMessage.setSender("assistant");
-        aiMessage.setTextContent(aiResponse);
+        aiMessage.setTextContent(aiQuestion);
         String aiMessageId = voiceMessageRepository.create(aiMessage);
         log.info("AI message saved with ID: {}", aiMessageId);
 

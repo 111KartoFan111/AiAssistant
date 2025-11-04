@@ -84,9 +84,17 @@ public class ResumeService {
     }
 
     private User getCurrentUser() throws ExecutionException, InterruptedException {
-        String userEmail = SecurityContextHolder.getContext().getAuthentication().getName();
-        return userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
+        String principal = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (principal == null || principal.isBlank()) {
+            throw new RuntimeException("Authenticated user not found");
+        }
+        if (principal.contains("@")) {
+            return userRepository.findByEmail(principal)
+                    .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
+        } else {
+            return userRepository.findById(principal)
+                    .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
+        }
     }
 
     private ResumeDtos.ResumeResponse mapToResponse(Resume resume) {

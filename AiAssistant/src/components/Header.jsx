@@ -1,9 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(() => Boolean(localStorage.getItem('token')));
+
+  useEffect(() => {
+    const updateAuth = () => setIsAuthed(Boolean(localStorage.getItem('token')));
+    updateAuth();
+    window.addEventListener('storage', updateAuth);
+    return () => window.removeEventListener('storage', updateAuth);
+  }, []);
 
   return (
     <header className="relative z-50">
@@ -33,18 +41,29 @@ const Header = () => {
 
             {/* Desktop Buttons */}
             <div className="hidden md:flex items-center gap-3">
-              <button 
-                onClick={() => navigate('/signin')}
-                className="text-white hover:text-gray-200 font-semibold px-5 py-2 text-sm transition-colors"
-              >
-                Войти
-              </button>
-              <button 
-                onClick={() => navigate('/signup')}
-                className="bg-white text-[#3D2D4C] hover:bg-gray-100 font-semibold px-6 py-2.5 rounded-xl text-sm transition-all shadow-lg hover:shadow-xl"
-              >
-                Регистрация
-              </button>
+              {isAuthed ? (
+                <button 
+                  onClick={() => navigate('/dashboard')}
+                  className="bg-white text-[#3D2D4C] hover:bg-gray-100 font-semibold px-6 py-2.5 rounded-xl text-sm transition-all shadow-lg hover:shadow-xl"
+                >
+                  В кабинет
+                </button>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => navigate('/signin')}
+                    className="text-white hover:text-gray-200 font-semibold px-5 py-2 text-sm transition-colors"
+                  >
+                    Войти
+                  </button>
+                  <button 
+                    onClick={() => navigate('/signup')}
+                    className="bg-white text-[#3D2D4C] hover:bg-gray-100 font-semibold px-6 py-2.5 rounded-xl text-sm transition-all shadow-lg hover:shadow-xl"
+                  >
+                    Регистрация
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Mobile menu button */}
@@ -70,18 +89,29 @@ const Header = () => {
                   О продукте
                 </a>
                 <div className="border-t border-[#4D3D5C] my-2"></div>
-                <button 
-                  onClick={() => navigate('/signin')}
-                  className="mx-4 px-4 py-3 text-white hover:bg-[#4D3D5C] text-sm font-semibold text-left rounded-lg transition-colors"
-                >
-                  Войти
-                </button>
-                <button 
-                  onClick={() => navigate('/signup')}
-                  className="mx-4 bg-white text-[#3D2D4C] font-semibold px-4 py-3 rounded-xl text-sm shadow-lg"
-                >
-                  Регистрация
-                </button>
+                {isAuthed ? (
+                  <button 
+                    onClick={() => navigate('/dashboard')}
+                    className="mx-4 bg-white text-[#3D2D4C] font-semibold px-4 py-3 rounded-xl text-sm shadow-lg"
+                  >
+                    В кабинет
+                  </button>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => navigate('/signin')}
+                      className="mx-4 px-4 py-3 text-white hover:bg-[#4D3D5C] text-sm font-semibold text-left rounded-lg transition-colors"
+                    >
+                      Войти
+                    </button>
+                    <button 
+                      onClick={() => navigate('/signup')}
+                      className="mx-4 bg-white text-[#3D2D4C] font-semibold px-4 py-3 rounded-xl text-sm shadow-lg"
+                    >
+                      Регистрация
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           )}

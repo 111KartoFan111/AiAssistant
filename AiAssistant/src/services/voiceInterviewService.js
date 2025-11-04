@@ -7,6 +7,19 @@ const getAuthToken = () => {
 };
 
 const voiceInterviewService = {
+    getHistory: async () => {
+        try {
+            const response = await axios.get(
+                `${API_BASE_URL}/voice-interviews/history`,
+                { headers: { 'Authorization': `Bearer ${getAuthToken()}` } }
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching voice interview history:', error);
+            throw error;
+        }
+    },
+
     getInterviewDetails: async (sessionId) => {
         try {
             const response = await axios.get(
@@ -42,6 +55,22 @@ const voiceInterviewService = {
             return response.data;
         } catch (error) {
             console.error('Error submitting audio answer:', error);
+            throw error;
+        }
+    },
+
+    completeInterview: async (sessionId) => {
+        try {
+            const response = await axios.post(
+                `${API_BASE_URL}/voice-interviews/${sessionId}/complete`,
+                {},
+                {
+                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                }
+            );
+            return response.data;
+        } catch (error) {
+            console.error('Error completing voice interview:', error);
             throw error;
         }
     }
