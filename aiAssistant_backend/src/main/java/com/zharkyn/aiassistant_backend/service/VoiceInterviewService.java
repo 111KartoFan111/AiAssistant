@@ -55,7 +55,6 @@ public class VoiceInterviewService {
         
         String interviewId = voiceInterviewRepository.create(interview);
         
-        // Let AI start the conversation with Question 1/20
         try {
             String firstQuestion = openAIService.generateNextQuestion(
                     request.getPositionTitle(),
@@ -133,7 +132,6 @@ public class VoiceInterviewService {
             transcript = null;
         }
 
-        // Save user's message (audio + transcript)
         VoiceMessage userMessage = new VoiceMessage();
         userMessage.setSessionId(sessionId);
         userMessage.setSender("user");
@@ -144,7 +142,6 @@ public class VoiceInterviewService {
         String userMessageId = voiceMessageRepository.create(userMessage);
         log.info("User message saved with ID: {}", userMessageId);
 
-        // Determine next question number based on how many assistant messages exist
         int nextQuestionNumber = 1;
         try {
             List<VoiceMessage> existing = voiceMessageRepository.getBySessionId(sessionId);

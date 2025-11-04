@@ -27,7 +27,6 @@ public class OpenAIChatService {
     @Value("${openai.api.key:}")
     private String apiKeyProp;
 
-    // Hardcoded for local use; override via OPENAI_API_KEY env or application.properties if set
     private String apiKey = "sk-proj-REPLACE_WITH_YOUR_KEY";
 
     @Value("${openai.api.base:https://api.openai.com}")
